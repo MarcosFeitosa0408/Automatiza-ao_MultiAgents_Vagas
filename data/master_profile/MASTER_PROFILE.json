@@ -1,34 +1,205 @@
-from core.schemas.personalization import PersonalizationResult
-from core.schemas.qualification import QualificationResult
-
-
-class ValidationGate:
-    """Valida se uma vaga pode seguir para aprovação humana."""
-
-    def validate(
-        self,
-        qualification: QualificationResult,
-        personalization: PersonalizationResult,
-    ) -> dict:
-        blocking_issues: list[str] = []
-        warnings: list[str] = []
-
-        if qualification.fit_score < 6.5:
-            blocking_issues.append("FIT_ABAIXO_DO_LIMITE")
-
-        if not personalization.evidence_verified:
-            blocking_issues.append("EVIDENCIA_NAO_VERIFICADA")
-
-        if qualification.eliminatory_gaps:
-            blocking_issues.append("LACUNA_ELIMINATORIA")
-
-        if personalization.unsupported_requirements:
-            warnings.append("REQUISITOS_NAO_COMPROVADOS")
-
-        approved_for_human_review = len(blocking_issues) == 0
-
-        return {
-            "approved_for_human_review": approved_for_human_review,
-            "blocking_issues": blocking_issues,
-            "warnings": warnings,
+{
+  "schema_version": "1.0",
+  "candidate_id": "marcos-feitosa",
+  "candidate": {
+    "name": "Marcos Feitosa",
+    "location": {
+      "city": "São Paulo",
+      "state": "SP",
+      "country": "Brasil"
+    },
+    "employment_status": {
+      "currently_clt": false,
+      "actively_seeking": true,
+      "priority": "CLT",
+      "primary_goal": "Atuar profissionalmente como Analista de Dados"
+    },
+    "career_target": {
+      "primary_roles": [
+        "Analista de Dados",
+        "Analista de BI",
+        "Data Analyst",
+        "BI Analyst"
+      ],
+      "secondary_roles": [
+        "Analista de Dados Júnior",
+        "Desenvolvedor de Dados",
+        "Analista de Automação"
+      ],
+      "seniority": [
+        "Júnior"
+      ]
+    },
+    "work_preferences": {
+      "employment_type_priority": [
+        "CLT"
+      ],
+      "remote": true,
+      "hybrid": true,
+      "onsite": true,
+      "preferred_location": [
+        "São Paulo - SP"
+      ],
+      "relocation": false
+    }
+  },
+  "professional_positioning": {
+    "title": "Analista de Dados",
+    "summary": "Profissional focado em Análise de Dados, Business Intelligence, automação e transformação de dados em informações para apoiar decisões de negócio.",
+    "focus": [
+      "Análise de Dados",
+      "Business Intelligence",
+      "Power BI",
+      "SQL",
+      "Python",
+      "Excel",
+      "ETL",
+      "Automação"
+    ]
+  },
+  "education": [
+    {
+      "degree": "Análise e Desenvolvimento de Sistemas",
+      "institution": "UNICID",
+      "status": "Concluído"
+    },
+    {
+      "degree": "MBA/Pós-graduação em Análise de Dados, BI e Big Data",
+      "institution": "Não informado",
+      "status": "Concluído"
+    }
+  ],
+  "skills": {
+    "core": [
+      "Power BI",
+      "SQL",
+      "Excel Avançado",
+      "Python",
+      "ETL",
+      "Business Intelligence",
+      "Data Analytics"
+    ],
+    "database": [
+      "SQL",
+      "SQL Server",
+      "T-SQL"
+    ],
+    "python": [
+      "Python",
+      "Pandas",
+      "NumPy"
+    ],
+    "analytics": [
+      "Análise de Dados",
+      "Data Cleaning",
+      "Data Validation",
+      "KPIs",
+      "DAX",
+      "Power Query"
+    ],
+    "tools": [
+      "Power BI",
+      "Excel",
+      "Git",
+      "GitHub",
+      "SQL Server Management Studio"
+    ],
+    "automation": [
+      "Automação de processos",
+      "ETL",
+      "Agentes de IA"
+    ]
+  },
+  "experience": [
+    {
+      "company": "Nerd Cell",
+      "role": "Analista de Dados Junior",
+      "employment_type": "Freelance",
+      "start": "2025-03",
+      "current": true,
+      "location": "Brasil",
+      "work_model": "Remoto",
+      "technologies": [
+        "Excel",
+        "Power Query",
+        "Power BI",
+        "DAX"
+      ],
+      "responsibilities": [
+        "Tratamento e padronização de dados utilizando Excel e Power Query",
+        "Desenvolvimento de dashboards em Power BI",
+        "Criação e acompanhamento de indicadores de vendas, estoque e desempenho",
+        "Análise de giro de estoque, produtos de baixa rotação e composição de mix"
+      ],
+      "achievements": [
+        {
+          "metric": "Aumento de vendas",
+          "value": 15,
+          "description": "Aumento aproximado de vendas observado após a aplicação das análises e dashboards",
+          "unit": "%",
+          "approximate": true,
+          "period": "aproximadamente 3 meses"
         }
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "name": "Multi-Agent Data Analytics",
+      "description": "Projeto de arquitetura multiagente para análise, qualificação e validação de dados.",
+      "technologies": [
+        "Python",
+        "Pandas",
+        "Pytest",
+        "Git",
+        "GitHub"
+      ],
+      "context": "Projeto de estudo e desenvolvimento de arquitetura de agentes para análise de dados.",
+      "authorized_for_portfolio": true
+    },
+    {
+      "name": "EDAP - Enterprise Data Analytics Platform",
+      "description": "Plataforma de dados voltada para ETL, qualidade de dados, BI, dashboards e apoio à decisão.",
+      "technologies": [
+        "Python",
+        "ETL",
+        "Power BI",
+        "JavaScript",
+        "Data Quality"
+      ],
+      "context": "Projeto de portfólio.",
+      "authorized_for_portfolio": true
+    },
+    {
+      "name": "Data Quality Inspector",
+      "description": "Ferramenta para inspeção e avaliação da qualidade de arquivos CSV.",
+      "technologies": [
+        "Python",
+        "Pandas",
+        "CSV"
+      ],
+      "context": "Projeto de portfólio.",
+      "authorized_for_portfolio": true
+    }
+  ],
+  "languages": {
+    "portuguese": "Nativo",
+    "english": "Básico"
+  },
+  "portfolio": {
+    "portfolio_url": "https://marcosfeitosa0408.github.io/portfolio/",
+    "github_url": "https://github.com/MarcosFeitosa0408",
+    "linkedin_url": "https://www.linkedin.com/in/marcosfeitosa-analista/"
+  },
+  "evidence_policy": {
+    "master_profile_is_source_of_truth": true,
+    "never_invent_skill": true,
+    "never_invent_experience": true,
+    "never_invent_education": true,
+    "never_invent_certification": true,
+    "never_invent_result": true,
+    "never_invent_salary": true,
+    "never_invent_job": true,
+    "unknown_value": "NÃO INFORMADO"
+  }
+}
