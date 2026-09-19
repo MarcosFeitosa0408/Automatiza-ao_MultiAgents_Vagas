@@ -70,11 +70,17 @@ class PersonalizationAgent:
 
         matched = {skill.lower() for skill in matched_skills}
 
-        return [
-            skill
-            for skill in all_skills
-            if skill.lower() in matched
-        ]
+        selected: list[str] = []
+        seen: set[str] = set()
+
+        for skill in all_skills:
+            normalized_skill = skill.lower()
+
+            if normalized_skill in matched and normalized_skill not in seen:
+                selected.append(skill)
+                seen.add(normalized_skill)
+
+        return selected
 
     def _project_is_relevant(
         self,
