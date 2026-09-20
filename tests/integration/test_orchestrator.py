@@ -1,3 +1,7 @@
+import pytest
+
+from datetime import timedelta
+
 from core.orchestrator.orchestrator import JobOrchestrator
 from core.schemas.job import JobOpportunity, JobStatus, WorkModel
 
@@ -141,3 +145,117 @@ def test_orchestrator_runs_application_tracking_flow():
     assert application.tracking.history[1].note == (
         "Candidatura enviada."
     )
+
+
+def test_orchestrator_blocks_followup_before_five_days():
+    orchestrator = JobOrchestrator()
+
+    job = JobOpportunity(
+        job_id="followup-integration-001",
+        title="Analista de Dados Júnior",
+        company="Empresa Teste",
+        source="TESTE",
+        location="São Paulo",
+        work_model=WorkModel.REMOTE,
+        employment_type="CLT",
+        requirements=["Power BI", "SQL", "Excel"],
+    )
+
+    application = orchestrator.create_job_application(
+        job=job,
+        application_id="application-followup-integration-001",
+    )
+
+    application = orchestrator.qualify_job_application(application)
+    application = orchestrator.personalize_job_application(application)
+    application = orchestrator.prepare_job_application(application)
+    application = orchestrator.approve_job_application(application)
+    application = orchestrator.start_job_application_tracking(
+        application
+    )
+
+    application = orchestrator.update_job_application_status(
+        application,
+        JobStatus.APPLIED,
+        note="Candidatura enviada.",
+    )
+
+    assert application.tracking is not None
+
+    now = application.tracking.history[-1].occurred_at + timedelta(
+        days=4
+    )
+
+    assert (
+        orchestrator.should_follow_up_job_application(
+            application,
+            now=now,
+        )
+        is False
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Ainda não é o momento permitido para registrar o follow-up.",
+    ):
+        orchestrator.register_job_application_follow_up(
+            application,
+            occurred_at=now,
+        )
+
+
+def test_orchestrator_registers_first_followup_after_five_days():
+    orchestrator = JobOrchestrator()
+
+    job = JobOpportunity(
+        job_id="followup-integration-002",
+        title="Analista de Dados Júnior",
+        company="Empresa Teste",
+        source="TESTE",
+        location="São Paulo",
+        work_model=WorkModel.REMOTE,
+        employment_type="CLT",
+        requirements=["Power BI", "SQL", "Excel"],
+    )
+
+    application = orchestrator.create_job_application(
+        job=job,
+        application_id="application-followup-integration-002",
+    )
+
+    application = orchestrator.qualify_job_application(application)
+    application = orchestrator.personalize_job_application(application)
+    application = orchestrator.prepare_job_application(application)
+    application = orchestrator.approve_job_application(application)
+    application = orchestrator.start_job_application_tracking(
+        application
+    )
+
+    application = orchestrator.update_job_application_status(
+        application,
+        JobStatus.APPLIED,
+        note="Candidatura enviada.",
+    )
+
+    assert application.tracking is not None
+
+    applied_at = application.tracking.history[-1].occurred_at
+
+    followup_at = applied_at + timedelta(days=5)
+
+    assert (
+        orchestrator.should_follow_up_job_application(
+            application,
+            now=followup_at,
+        )
+        is True
+    )
+
+    application = orchestrator.register_job_application_follow_up(
+        application,
+        occurred_at=followup_at,
+    )
+
+    assert application.tracking is not None
+    assert application.tracking.followup_count == 1
+    assert application.tracking.last_followup_at == followup_at

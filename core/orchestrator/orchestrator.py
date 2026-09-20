@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from core.repositories.factory import (
     create_job_application_repository,
@@ -43,10 +43,15 @@ class JobOrchestrator:
     ) -> JobApplicationObject:
         """Atualiza o objeto central e renova o timestamp de modificação."""
 
+        updated_at = datetime.now(timezone.utc)
+
+        if updated_at <= application.updated_at:
+            updated_at = application.updated_at + timedelta(microseconds=1)
+
         return application.model_copy(
             update={
                 **updates,
-                "updated_at": datetime.now(timezone.utc),
+                "updated_at": updated_at,
             }
         )
 
