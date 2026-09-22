@@ -2,6 +2,7 @@ from datetime import datetime
 import os
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from core.database import initialize_database
@@ -21,6 +22,13 @@ app = FastAPI(
     version="0.2.0",
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 def initialize_configured_database() -> None:
     """Inicializa o banco somente quando o backend configurado é PostgreSQL."""
