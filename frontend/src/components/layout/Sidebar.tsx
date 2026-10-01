@@ -1,4 +1,7 @@
-export type NavigationPage = "dashboard" | "applications";
+export type NavigationPage =
+  | "dashboard"
+  | "applications"
+  | "new-application";
 
 type SidebarProps = {
   activePage: NavigationPage;
@@ -12,6 +15,7 @@ const sidebarItems: {
 }[] = [
   { page: "dashboard", label: "Dashboard", icon: "D" },
   { page: "applications", label: "Candidaturas", icon: "C" },
+  { page: "new-application", label: "Nova candidatura", icon: "+" },
 ];
 
 export default function Sidebar({

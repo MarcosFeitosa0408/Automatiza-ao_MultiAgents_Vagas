@@ -506,3 +506,87 @@
   white-space: nowrap;
   border: 0;
 }
+
+.opportunity-form {
+  display: grid;
+  gap: 24px;
+}
+
+.opportunity-form fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.opportunity-form > .primary-button {
+  justify-self: start;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.form-field-wide {
+  grid-column: 1 / -1;
+}
+
+.form-field label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.form-field input,
+.form-field select,
+.form-field textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  color: var(--text);
+  background: var(--surface);
+}
+
+.form-field textarea {
+  resize: vertical;
+}
+
+.form-help,
+.form-field small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.application-success {
+  margin-bottom: 24px;
+  padding: 22px;
+  border: 1px solid #a7f3d0;
+  border-radius: 12px;
+  color: #065f46;
+  background: #ecfdf5;
+}
+
+.application-success h2 {
+  font-size: 22px;
+}
+
+.application-success p {
+  margin-top: 12px;
+  line-height: 1.7;
+}
+
+@media (max-width: 760px) {
+  .form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

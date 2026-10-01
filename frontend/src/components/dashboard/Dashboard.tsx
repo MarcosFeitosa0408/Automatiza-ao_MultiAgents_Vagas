@@ -2,7 +2,13 @@ import { useEffect, useState } from "react";
 import { getJobApplicationMetrics } from "../../api/metrics";
 import type { JobApplicationMetrics } from "../../api/metrics";
 
-export default function Dashboard() {
+type DashboardProps = {
+  onNewApplication: () => void;
+};
+
+export default function Dashboard({
+  onNewApplication,
+}: DashboardProps) {
   const [metrics, setMetrics] = useState<JobApplicationMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -44,11 +50,11 @@ export default function Dashboard() {
 <button
   className="primary-button"
   type="button"
-  disabled
-  title="Formulário disponível na próxima etapa"
+  onClick={onNewApplication}
 >
-  Nova candidatura · em breve
+  + Nova candidatura
 </button>
+
       </div>
 
       {error && (

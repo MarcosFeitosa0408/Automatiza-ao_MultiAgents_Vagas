@@ -72,4 +72,28 @@ describe("Navegação da plataforma", () => {
 
     expect(screen.getByText("Conteúdo das candidaturas")).toBeTruthy();
   });
+
+  it("abre o formulário pelo menu Nova candidatura", async () => {
+  const user = userEvent.setup();
+
+  render(<App />);
+
+  await user.click(
+    screen.getByRole("button", { name: "Nova candidatura" }),
+  );
+
+  expect(
+    await screen.findByRole("heading", {
+      name: "Cadastrar oportunidade",
+    }),
+  ).toBeTruthy();
+
+  expect(window.location.hash).toBe("#/nova-candidatura");
+
+  expect(
+    screen
+      .getByRole("button", { name: "Nova candidatura" })
+      .getAttribute("aria-current"),
+  ).toBe("page");
+});
 });
