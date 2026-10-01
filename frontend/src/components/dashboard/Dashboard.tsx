@@ -41,9 +41,14 @@ export default function Dashboard() {
           </p>
         </div>
 
-        <button className="primary-button" type="button">
-          + Nova candidatura
-        </button>
+<button
+  className="primary-button"
+  type="button"
+  disabled
+  title="Formulário disponível na próxima etapa"
+>
+  Nova candidatura · em breve
+</button>
       </div>
 
       {error && (
