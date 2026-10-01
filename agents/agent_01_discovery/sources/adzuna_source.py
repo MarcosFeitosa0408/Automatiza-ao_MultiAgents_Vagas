@@ -24,7 +24,10 @@ class AdzunaJobSource(BaseJobSource):
         """Coleta vagas da API da Adzuna e normaliza a resposta."""
 
         response = httpx.get(
-            self.BASE_URL,
+            (
+                "https://api.adzuna.com/v1/api/jobs/"
+                f"{self.country}/search/1"
+            ),
             params={
                 "app_id": self.app_id,
                 "app_key": self.app_key,
@@ -68,3 +71,28 @@ class AdzunaJobSource(BaseJobSource):
             )
 
         return jobs
+
+    def __init__(
+        self,
+        app_id: str,
+        app_key: str,
+        query: str = "",
+        location: str = "",
+        country: str = "br",
+    ):
+        normalized_country = country.strip().lower()
+
+        if (
+            len(normalized_country) != 2
+            or not normalized_country.isascii()
+            or not normalized_country.isalpha()
+        ):
+            raise ValueError(
+                "Informe o código do país com duas letras."
+            )
+
+        self.app_id = app_id
+        self.app_key = app_key
+        self.query = query
+        self.location = location
+        self.country = normalized_country
