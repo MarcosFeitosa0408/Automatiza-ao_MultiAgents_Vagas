@@ -15,6 +15,7 @@ from core.schemas.api import (
     TrackingStatusUpdateRequest,
 )
 from core.schemas.job import JobOpportunity
+from core.opportunity_search_api import router as opportunity_search_router
 
 
 app = FastAPI(
@@ -29,6 +30,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(opportunity_search_router)
 
 def initialize_configured_database() -> None:
     """Inicializa o banco somente quando o backend configurado é PostgreSQL."""
