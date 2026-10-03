@@ -39,6 +39,8 @@ class WorkPreferences(StrictModel):
 
 class CandidateData(StrictModel):
     name: str
+    email: str = ""
+    phone: str = ""
     location: Location
     employment_status: EmploymentStatus
     career_target: CareerTarget
@@ -55,6 +57,8 @@ class Education(StrictModel):
     degree: str
     institution: str
     status: str
+    start: str | None = None
+    end: str | None = None
 
 
 class Skills(StrictModel):

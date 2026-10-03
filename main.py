@@ -1,7 +1,8 @@
+from core.resume_preview import ResumePreview, build_resume_preview
 from datetime import datetime
 import os
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -16,6 +17,24 @@ from core.schemas.api import (
 )
 from core.schemas.job import JobOpportunity
 from core.opportunity_search_api import router as opportunity_search_router
+from core.schemas.candidate import MasterProfile
+from agents.agent_08_interview.interview_agent import (
+    InterviewAgent,
+    InterviewPlan,
+)
+
+from copy import copy
+from fastapi.exceptions import RequestValidationError
+from core.accounts import get_store, AccountMemoryAgent, AccountJobRepository
+from core.auth_api import router as auth_router, require_user
+
+
+def get_user_orchestrator(user=Depends(require_user)):
+    scoped = copy(orchestrator)
+    store = get_store()
+    scoped.memory_agent = AccountMemoryAgent(store, user['id'])
+    scoped.job_application_repository = AccountJobRepository(store, user['id'])
+    return scoped
 
 
 app = FastAPI(
@@ -25,13 +44,14 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-app.include_router(opportunity_search_router)
+app.include_router(auth_router)
+app.include_router(opportunity_search_router, dependencies=[Depends(require_user)])
 
 def initialize_configured_database() -> None:
     """Inicializa o banco somente quando o backend configurado é PostgreSQL."""
@@ -71,7 +91,7 @@ def health_check():
 
 
 @app.post("/analyze-job")
-def analyze_job(request: JobAnalysisRequest):
+def analyze_job(request: JobAnalysisRequest, orchestrator: JobOrchestrator = Depends(get_user_orchestrator)):
     job = JobOpportunity(
         job_id=request.job_id,
         title=request.title,
@@ -91,7 +111,7 @@ def analyze_job(request: JobAnalysisRequest):
 
 
 @app.post("/personalize-job")
-def personalize_job(request: JobAnalysisRequest):
+def personalize_job(request: JobAnalysisRequest, orchestrator: JobOrchestrator = Depends(get_user_orchestrator)):
     job = JobOpportunity(
         job_id=request.job_id,
         title=request.title,
@@ -119,7 +139,7 @@ def personalize_job(request: JobAnalysisRequest):
 
 
 @app.post("/prepare-application")
-def prepare_application(request: JobAnalysisRequest):
+def prepare_application(request: JobAnalysisRequest, orchestrator: JobOrchestrator = Depends(get_user_orchestrator)):
     job = JobOpportunity(
         job_id=request.job_id,
         title=request.title,
@@ -145,7 +165,7 @@ def prepare_application(request: JobAnalysisRequest):
         "application": preparation,
     }
 @app.post("/approve-application")
-def approve_application(request: ApplicationDecisionRequest):
+def approve_application(request: ApplicationDecisionRequest, orchestrator: JobOrchestrator = Depends(get_user_orchestrator)):
     approved = orchestrator.approve_application(
         request.application
     )
@@ -154,7 +174,7 @@ def approve_application(request: ApplicationDecisionRequest):
 
 
 @app.post("/reject-application")
-def reject_application(request: ApplicationDecisionRequest):
+def reject_application(request: ApplicationDecisionRequest, orchestrator: JobOrchestrator = Depends(get_user_orchestrator)):
     rejected = orchestrator.reject_application(
         request.application
     )
@@ -163,7 +183,7 @@ def reject_application(request: ApplicationDecisionRequest):
 
 
 @app.post("/update-tracking-status")
-def update_tracking_status(request: TrackingStatusUpdateRequest):
+def update_tracking_status(request: TrackingStatusUpdateRequest, orchestrator: JobOrchestrator = Depends(get_user_orchestrator)):
     updated = orchestrator.update_tracking_status(
         request.tracking,
         request.new_status,
@@ -176,6 +196,7 @@ def update_tracking_status(request: TrackingStatusUpdateRequest):
 @app.post("/job-applications")
 def create_job_application(
     request: JobApplicationCreateRequest,
+    orchestrator: JobOrchestrator = Depends(get_user_orchestrator),
 ):
     application = orchestrator.create_job_application(
         job=request.job,
@@ -190,12 +211,12 @@ def create_job_application(
 
 
 @app.get("/job-applications")
-def list_job_applications():
+def list_job_applications(orchestrator: JobOrchestrator = Depends(get_user_orchestrator)):
     return orchestrator.list_job_applications()
 
 
 @app.get("/job-applications/metrics")
-def get_job_application_metrics():
+def get_job_application_metrics(orchestrator: JobOrchestrator = Depends(get_user_orchestrator)):
     applications = orchestrator.list_job_applications()
 
     metrics = orchestrator.calculate_job_application_metrics(
@@ -206,7 +227,7 @@ def get_job_application_metrics():
 
 
 @app.get("/job-applications/{application_id}")
-def get_job_application(application_id: str):
+def get_job_application(application_id: str, orchestrator: JobOrchestrator = Depends(get_user_orchestrator)):
     application = orchestrator.get_job_application(
         application_id
     )
@@ -223,7 +244,7 @@ def get_job_application(application_id: str):
     return application
 
 @app.delete("/job-applications/{application_id}")
-def delete_job_application(application_id: str):
+def delete_job_application(application_id: str, orchestrator: JobOrchestrator = Depends(get_user_orchestrator)):
     deleted = orchestrator.delete_job_application(
         application_id
     )
@@ -244,7 +265,7 @@ def delete_job_application(application_id: str):
 
 
 @app.post("/job-applications/{application_id}/qualify")
-def qualify_job_application(application_id: str):
+def qualify_job_application(application_id: str, orchestrator: JobOrchestrator = Depends(get_user_orchestrator)):
     application = orchestrator.get_job_application(
         application_id
     )
@@ -272,7 +293,7 @@ def qualify_job_application(application_id: str):
 
 
 @app.post("/job-applications/{application_id}/personalize")
-def personalize_job_application(application_id: str):
+def personalize_job_application(application_id: str, orchestrator: JobOrchestrator = Depends(get_user_orchestrator)):
     application = orchestrator.get_job_application(
         application_id
     )
@@ -300,7 +321,7 @@ def personalize_job_application(application_id: str):
 
 
 @app.post("/job-applications/{application_id}/prepare")
-def prepare_job_application(application_id: str):
+def prepare_job_application(application_id: str, orchestrator: JobOrchestrator = Depends(get_user_orchestrator)):
     application = orchestrator.get_job_application(
         application_id
     )
@@ -328,7 +349,7 @@ def prepare_job_application(application_id: str):
 
 
 @app.post("/job-applications/{application_id}/approve")
-def approve_stored_job_application(application_id: str):
+def approve_stored_job_application(application_id: str, orchestrator: JobOrchestrator = Depends(get_user_orchestrator)):
     application = orchestrator.get_job_application(
         application_id
     )
@@ -356,7 +377,7 @@ def approve_stored_job_application(application_id: str):
 
 
 @app.post("/job-applications/{application_id}/reject")
-def reject_stored_job_application(application_id: str):
+def reject_stored_job_application(application_id: str, orchestrator: JobOrchestrator = Depends(get_user_orchestrator)):
     application = orchestrator.get_job_application(
         application_id
     )
@@ -384,7 +405,7 @@ def reject_stored_job_application(application_id: str):
 
 
 @app.post("/job-applications/{application_id}/tracking/start")
-def start_stored_job_application_tracking(application_id: str):
+def start_stored_job_application_tracking(application_id: str, orchestrator: JobOrchestrator = Depends(get_user_orchestrator)):
     application = orchestrator.get_job_application(
         application_id
     )
@@ -415,6 +436,7 @@ def start_stored_job_application_tracking(application_id: str):
 def update_stored_job_application_status(
     application_id: str,
     request: StoredTrackingStatusUpdateRequest,
+    orchestrator: JobOrchestrator = Depends(get_user_orchestrator),
 ):
     application = orchestrator.get_job_application(
         application_id
@@ -447,6 +469,7 @@ def update_stored_job_application_status(
 @app.post("/job-applications/{application_id}/follow-up/check")
 def check_stored_job_application_follow_up(
     application_id: str,
+    orchestrator: JobOrchestrator = Depends(get_user_orchestrator),
 ):
     application = orchestrator.get_job_application(
         application_id
@@ -478,6 +501,7 @@ def check_stored_job_application_follow_up(
 @app.post("/job-applications/{application_id}/follow-up/register")
 def register_stored_job_application_follow_up(
     application_id: str,
+    orchestrator: JobOrchestrator = Depends(get_user_orchestrator),
 ):
     application = orchestrator.get_job_application(
         application_id
@@ -505,5 +529,179 @@ def register_stored_job_application_follow_up(
     return saved_application
 
 
+@app.get("/profile", response_model=MasterProfile)
+def get_candidate_profile(orchestrator: JobOrchestrator = Depends(get_user_orchestrator)):
+    """Consulta o perfil usado pelos agentes."""
+
+    try:
+        return orchestrator.memory_agent.get_profile()
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=404,
+            detail="O perfil ainda não foi cadastrado.",
+        ) from None
+    except ValueError:
+        raise HTTPException(
+            status_code=500,
+            detail="O perfil salvo possui dados inválidos.",
+        ) from None
+    except OSError:
+        raise HTTPException(
+            status_code=500,
+            detail="Não foi possível ler o perfil.",
+        ) from None
 
 
+@app.put("/profile", response_model=MasterProfile)
+def update_candidate_profile(profile: MasterProfile, orchestrator: JobOrchestrator = Depends(get_user_orchestrator)):
+    """Valida e salva o perfil usado pelos agentes."""
+
+    try:
+        return orchestrator.memory_agent.save_profile(profile)
+    except OSError:
+        raise HTTPException(
+            status_code=500,
+            detail="Não foi possível salvar o perfil. Tente novamente.",
+        ) from None
+
+
+@app.post(
+    "/job-applications/{application_id}/resume-preview",
+    response_model=ResumePreview,
+)
+def generate_resume_preview(application_id: str, orchestrator: JobOrchestrator = Depends(get_user_orchestrator)):
+    application = orchestrator.get_job_application(application_id)
+
+    if application is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Candidatura não encontrada.",
+        )
+
+    try:
+        profile = orchestrator.memory_agent.get_profile()
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=404,
+            detail="Cadastre seu perfil antes de gerar o currículo.",
+        ) from None
+
+    # Usa uma mesma leitura do perfil para análise e personalização.
+    qualification = orchestrator.qualification_agent.calculate_fit(
+        application.job,
+        profile,
+    )
+
+    personalization = orchestrator.personalization_agent.personalize(
+        application.job,
+        profile,
+        qualification,
+    )
+
+    return build_resume_preview(
+        application_id=application.application_id,
+        job_title=application.job.title,
+        company=application.job.company,
+        profile=profile,
+        personalization=personalization,
+    )
+
+@app.post(
+    "/job-applications/{application_id}/interview-plan",
+    response_model=InterviewPlan,
+)
+def generate_interview_plan(application_id: str, orchestrator: JobOrchestrator = Depends(get_user_orchestrator)):
+    application = orchestrator.get_job_application(application_id)
+
+    if application is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Candidatura não encontrada.",
+        )
+
+    try:
+        profile = orchestrator.memory_agent.get_profile()
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=404,
+            detail="Cadastre seu perfil antes de preparar a entrevista.",
+        ) from None
+
+    return InterviewAgent().prepare(application.job, profile)
+
+
+from core.schemas.api import JobDetailsUpdateRequest
+from core.schemas.job_application import JobApplicationObject
+from core.schemas.job import JobStatus
+
+
+@app.patch(
+    "/job-applications/{application_id}/job-details",
+    response_model=JobApplicationObject,
+)
+def update_saved_job_details(
+    application_id: str,
+    request: JobDetailsUpdateRequest,
+    orchestrator: JobOrchestrator = Depends(get_user_orchestrator),
+):
+    application = orchestrator.get_job_application(application_id)
+
+    if application is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Candidatura não encontrada.",
+        )
+
+    if application.tracking is not None or application.preparation is not None:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Esta candidatura já possui preparação ou acompanhamento. "
+                "Cadastre uma nova oportunidade para alterar o anúncio."
+            ),
+        )
+
+    requirements = [
+        value.strip()
+        for value in request.requirements
+        if value.strip()
+    ]
+
+    if not requirements:
+        raise HTTPException(
+            status_code=422,
+            detail="Informe pelo menos um requisito real do anúncio.",
+        )
+
+    desirable = [
+        value.strip()
+        for value in request.desirable_requirements
+        if value.strip()
+    ]
+
+    updated_job = application.job.model_copy(
+        update={
+            "description": request.description.strip(),
+            "requirements": list(dict.fromkeys(requirements)),
+            "desirable_requirements": list(dict.fromkeys(desirable)),
+            "status": JobStatus.DISCOVERED,
+        }
+    )
+
+    # Resultados anteriores precisam ser recalculados para o novo anúncio.
+    updated_application = orchestrator._update_job_application(
+        application,
+        job=updated_job,
+        qualification=None,
+        personalization=None,
+        preparation=None,
+    )
+
+    return orchestrator.save_job_application(updated_application)
+
+@app.exception_handler(RequestValidationError)
+async def validation_error_handler(request: Request, exc: RequestValidationError):
+    return JSONResponse(status_code=422, content={"detail": [
+        {"loc": list(error["loc"]), "msg": error["msg"], "type": error["type"]}
+        for error in exc.errors()
+    ]})

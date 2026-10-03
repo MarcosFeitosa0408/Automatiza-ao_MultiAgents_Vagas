@@ -1,0 +1,112 @@
+{
+  "schema_version": "1.0",
+  "candidate_id": "example",
+  "candidate": {
+    "name": "Pessoa de Exemplo",
+    "email": "",
+    "phone": "",
+    "location": {
+      "city": "São Paulo",
+      "state": "SP",
+      "country": "Brasil"
+    },
+    "employment_status": {
+      "currently_clt": false,
+      "actively_seeking": true,
+      "priority": "",
+      "primary_goal": ""
+    },
+    "career_target": {
+      "primary_roles": [
+        "Analista de Dados Júnior"
+      ],
+      "secondary_roles": [],
+      "seniority": [
+        "Júnior"
+      ]
+    },
+    "work_preferences": {
+      "employment_type_priority": [
+        "CLT"
+      ],
+      "remote": true,
+      "hybrid": true,
+      "onsite": false,
+      "preferred_location": [
+        "São Paulo"
+      ],
+      "relocation": false
+    }
+  },
+  "professional_positioning": {
+    "title": "Analista de Dados",
+    "summary": "Perfil fictício exclusivo para testes.",
+    "focus": []
+  },
+  "education": [],
+  "skills": {
+    "core": [
+      "Power BI",
+      "SQL",
+      "Python",
+      "Excel",
+      "DAX"
+    ],
+    "database": [],
+    "python": [],
+    "analytics": [],
+    "tools": [],
+    "automation": []
+  },
+  "experience": [
+    {
+      "company": "Empresa Exemplo",
+      "role": "Analista",
+      "employment_type": "CLT",
+      "start": "2025-01",
+      "current": true,
+      "location": "São Paulo",
+      "work_model": "HYBRID",
+      "technologies": [
+        "Power BI",
+        "SQL"
+      ],
+      "responsibilities": [
+        "Criar relatórios"
+      ],
+      "achievements": []
+    }
+  ],
+  "projects": [
+    {
+      "name": "Projeto Exemplo",
+      "description": "Projeto fictício",
+      "technologies": [
+        "Power BI",
+        "SQL",
+        "Python"
+      ],
+      "authorized_for_portfolio": true
+    }
+  ],
+  "languages": {
+    "portuguese": "",
+    "english": ""
+  },
+  "portfolio": {
+    "portfolio_url": "",
+    "github_url": "",
+    "linkedin_url": ""
+  },
+  "evidence_policy": {
+    "master_profile_is_source_of_truth": true,
+    "never_invent_skill": true,
+    "never_invent_experience": true,
+    "never_invent_education": true,
+    "never_invent_certification": true,
+    "never_invent_result": true,
+    "never_invent_salary": true,
+    "never_invent_job": true,
+    "unknown_value": "NAO_IDENTIFICADO"
+  }
+}

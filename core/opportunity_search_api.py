@@ -38,6 +38,15 @@ def search_opportunities(request: OpportunitySearchRequest):
             status_code=504,
             detail="A fonte de vagas demorou para responder. Tente novamente.",
         ) from None
+    except httpx.HTTPStatusError as error:
+        raise HTTPException(
+            status_code=502,
+            detail=(
+                f"A Adzuna respondeu com HTTP {error.response.status_code}. "
+                f"Caracteres recebidos pelo servidor: "
+                f"ID={len(app_id)}, chave={len(app_key)}."
+            ),
+        ) from None
     except httpx.HTTPError:
         raise HTTPException(
             status_code=502,

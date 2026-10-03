@@ -1,3 +1,7 @@
+import DeleteApplication from "./DeleteApplication";
+import JobDetailsEditor from "../ApplicationDetails/JobDetailsEditor";
+import InterviewPanel from "./InterviewPanel";
+import ResumePanel from "./ResumePanel";
 import { useEffect, useState } from "react";
 import { listJobApplications } from "../../api/applications";
 import type {
@@ -39,6 +43,7 @@ export default function Applications() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -73,6 +78,7 @@ export default function Applications() {
   function reload() {
     setLoading(true);
     setError(null);
+    setNotice(null);
     setReloadKey((value) => value + 1);
   }
 
@@ -111,6 +117,8 @@ export default function Applications() {
           {loading ? "Carregando..." : "Atualizar"}
         </button>
       </div>
+
+      {notice && <p role="status">{notice}</p>}
 
       <article className="dashboard-panel" aria-busy={loading}>
         <div className="applications-toolbar">
@@ -207,6 +215,40 @@ export default function Applications() {
                         <span className="table-secondary">
                           {application.job.company}
                         </span>
+                        <span className="table-secondary">
+                          Cadastrada em {new Date(application.created_at).toLocaleString("pt-BR")}
+                        </span>
+                        <DeleteApplication
+                          applicationId={application.application_id}
+                          title={application.job.title}
+                          company={application.job.company}
+                          onDeleted={(id) => {
+                            setApplications((current) => current.filter((item) => item.application_id !== id));
+                            setNotice("Oportunidade excluída da sua conta.");
+                          }}
+                        />
+                        <JobDetailsEditor
+  application={application}
+  onSaved={(updated) => {
+    setApplications((current) =>
+      current.map((item) =>
+        item.application_id === updated.application_id
+          ? updated
+          : item,
+      ),
+    );
+  }}
+/>
+
+<ResumePanel
+  key={`resume-${application.application_id}-${application.updated_at}`}
+  applicationId={application.application_id}
+/>
+
+<InterviewPanel
+  key={`interview-${application.application_id}-${application.updated_at}`}
+  applicationId={application.application_id}
+/>
                       </td>
                       <td>{application.job.location || "Não informado"}</td>
                       <td>

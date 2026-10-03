@@ -5,7 +5,7 @@ from core.schemas.job import JobOpportunity, WorkModel
 
 
 def test_personalization_agent_uses_only_verified_profile_data():
-    profile = MemoryAgent().load_profile()
+    profile = MemoryAgent("tests/fixtures/profile.json").load_profile()
 
     job = JobOpportunity(
         job_id="personalization-001",

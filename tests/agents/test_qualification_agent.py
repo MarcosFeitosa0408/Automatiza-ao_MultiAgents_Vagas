@@ -1,10 +1,12 @@
+import pytest
+
 from agents.agent_00_memory.memory_agent import MemoryAgent
 from agents.agent_02_qualification.qualification_agent import QualificationAgent
 from core.schemas.job import JobOpportunity, WorkModel
 
 
 def test_qualification_agent_calculates_candidate_fit():
-    profile = MemoryAgent().load_profile()
+    profile = MemoryAgent("tests/fixtures/profile.json").load_profile()
 
     job = JobOpportunity(
         job_id="vaga-fit-001",
@@ -29,18 +31,16 @@ def test_qualification_agent_calculates_candidate_fit():
     assert result.job_id == "vaga-fit-001"
     assert 0 <= result.fit_score <= 10
     assert result.recommendation == "RECOMENDADA"
-
     assert "power bi" in result.matched_skills
     assert "sql" in result.matched_skills
     assert "python" in result.matched_skills
     assert "azure" in result.missing_skills
-
     assert result.breakdown.seniority == 10.0
     assert result.breakdown.location_work_model == 10.0
 
 
 def test_qualification_agent_rejects_low_fit_job():
-    profile = MemoryAgent().load_profile()
+    profile = MemoryAgent("tests/fixtures/profile.json").load_profile()
 
     job = JobOpportunity(
         job_id="vaga-fit-002",
@@ -64,3 +64,22 @@ def test_qualification_agent_rejects_low_fit_job():
     assert result.recommendation == "NAO_RECOMENDADA"
     assert len(result.matched_skills) == 0
     assert len(result.missing_skills) == 4
+
+
+@pytest.mark.parametrize("requirements", [[], ["", "   "]])
+def test_qualification_requires_informed_requirements(requirements):
+    profile = MemoryAgent("tests/fixtures/profile.json").load_profile()
+
+    job = JobOpportunity(
+        job_id="vaga-sem-requisitos",
+        title="Analista de Dados Júnior",
+        company="Empresa Teste",
+        source="TESTE",
+        requirements=requirements,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Informe os requisitos da vaga",
+    ):
+        QualificationAgent().calculate_fit(job, profile)

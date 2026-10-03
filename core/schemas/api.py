@@ -50,4 +50,9 @@ class JobApplicationCreateRequest(StrictModel):
     application_id: str = Field(min_length=1)
     job: JobOpportunity
 
+class JobDetailsUpdateRequest(StrictModel):
+    """Atualiza os dados do anúncio usados na análise."""
 
+    description: str = ""
+    requirements: list[str] = Field(default_factory=list)
+    desirable_requirements: list[str] = Field(default_factory=list)

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import App from "./App";
+import App from "./Platform";
 
 vi.mock("./components/dashboard/Dashboard", () => ({
   default: () => <p>Conteúdo do dashboard</p>,

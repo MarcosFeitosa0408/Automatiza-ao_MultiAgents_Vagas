@@ -16,10 +16,10 @@ export default function Header({
       </div>
 
       <div className="app-header-user">
-        <div className="app-header-avatar">MF</div>
+        <div className="app-header-avatar">U</div>
 
         <div>
-          <strong>Marcos Feitosa</strong>
+          <strong>Área do candidato</strong>
           <span>Controle humano ativo</span>
         </div>
       </div>

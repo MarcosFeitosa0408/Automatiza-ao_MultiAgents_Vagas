@@ -36,19 +36,23 @@ class QualificationAgent:
         }
 
         job_requirements = {
-            requirement.lower()
+            requirement.strip().lower()
             for requirement in job.requirements
+            if requirement.strip()
         }
+
+        if not job_requirements:
+            raise ValueError(
+                "Informe os requisitos da vaga antes de calcular "
+                "a compatibilidade."
+            )
 
         matched = sorted(candidate_skills & job_requirements)
         missing = sorted(job_requirements - candidate_skills)
 
-        if job_requirements:
-            technical_score = (
-                len(matched) / len(job_requirements)
-            ) * 10
-        else:
-            technical_score = 5.0
+        technical_score = (
+            len(matched) / len(job_requirements)
+        ) * 10
 
         experience_score = 7.0 if profile.experience else 0.0
         responsibilities_score = technical_score

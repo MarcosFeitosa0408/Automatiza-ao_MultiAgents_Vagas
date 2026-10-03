@@ -5,11 +5,13 @@ import { ApiError } from "../../api/client";
 import type {
   JobApplicationCreateRequest,
   JobApplicationObject,
+  JobOpportunity,
   WorkModel,
 } from "../../types/api";
 
 type NewApplicationProps = {
   onViewApplications: () => void;
+  initialJob?: JobOpportunity;
 };
 
 function splitLines(value: string): string[] {
@@ -33,6 +35,7 @@ function errorMessage(error: unknown): string {
 
 export default function NewApplication({
   onViewApplications,
+  initialJob,
 }: NewApplicationProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -83,7 +86,7 @@ export default function NewApplication({
     if (!ids.current) {
       ids.current = {
         applicationId: crypto.randomUUID(),
-        jobId: crypto.randomUUID(),
+        jobId: initialJob?.job_id ?? crypto.randomUUID(),
       };
     }
 
@@ -101,7 +104,7 @@ export default function NewApplication({
         description: read("description"),
         requirements: splitLines(read("requirements")),
         desirable_requirements: splitLines(read("desirable_requirements")),
-        discovered_at: new Date().toISOString(),
+        discovered_at: initialJob?.discovered_at ?? new Date().toISOString(),
         status: "DISCOVERED",
       },
     };
@@ -154,8 +157,8 @@ export default function NewApplication({
           <p className="dashboard-eyebrow">NOVA OPORTUNIDADE</p>
           <h2 id="new-application-title">Cadastrar oportunidade</h2>
           <p>
-            Copie as informações do anúncio real. Este cadastro inicia
-            a análise na plataforma e não envia candidatura à empresa.
+            Confira as informações do anúncio real. Este cadastro guarda
+            a oportunidade na plataforma para análise e revisão humana.
           </p>
         </div>
       </div>
@@ -166,6 +169,13 @@ export default function NewApplication({
         aria-busy={saving}
       >
         <p className="form-help">Campos com * são obrigatórios.</p>
+
+        {initialJob && (
+          <p className="form-help">
+            Os dados da oportunidade selecionada foram preenchidos.
+            Revise a descrição e informe os requisitos antes da análise.
+          </p>
+        )}
 
         {error && (
           <div className="dashboard-error" role="alert">
@@ -179,12 +189,22 @@ export default function NewApplication({
           <div className="form-grid">
             <div className="form-field">
               <label htmlFor="job-title">Cargo *</label>
-              <input id="job-title" name="title" required />
+              <input
+                id="job-title"
+                name="title"
+                defaultValue={initialJob?.title ?? ""}
+                required
+              />
             </div>
 
             <div className="form-field">
               <label htmlFor="job-company">Empresa *</label>
-              <input id="job-company" name="company" required />
+              <input
+                id="job-company"
+                name="company"
+                defaultValue={initialJob?.company ?? ""}
+                required
+              />
             </div>
 
             <div className="form-field">
@@ -192,6 +212,7 @@ export default function NewApplication({
               <input
                 id="job-source"
                 name="source"
+                defaultValue={initialJob?.source ?? ""}
                 placeholder="Ex.: site da empresa, LinkedIn, Gupy"
                 required
               />
@@ -203,6 +224,7 @@ export default function NewApplication({
                 id="job-url"
                 name="url"
                 type="url"
+                defaultValue={initialJob?.url ?? ""}
                 placeholder="https://..."
               />
             </div>
@@ -212,6 +234,7 @@ export default function NewApplication({
               <input
                 id="job-location"
                 name="location"
+                defaultValue={initialJob?.location ?? ""}
                 placeholder="Cidade e estado, conforme o anúncio"
               />
             </div>
@@ -221,7 +244,7 @@ export default function NewApplication({
               <select
                 id="job-work-model"
                 name="work_model"
-                defaultValue="UNKNOWN"
+                defaultValue={initialJob?.work_model ?? "UNKNOWN"}
               >
                 <option value="UNKNOWN">Não informada</option>
                 <option value="REMOTE">Remoto</option>
@@ -235,6 +258,7 @@ export default function NewApplication({
               <input
                 id="job-employment-type"
                 name="employment_type"
+                defaultValue={initialJob?.employment_type ?? ""}
                 placeholder="Ex.: CLT, PJ, estágio"
               />
             </div>
@@ -244,6 +268,7 @@ export default function NewApplication({
               <textarea
                 id="job-description"
                 name="description"
+                defaultValue={initialJob?.description ?? ""}
                 rows={6}
                 placeholder="Cole a descrição original do anúncio"
               />
@@ -254,11 +279,12 @@ export default function NewApplication({
               <textarea
                 id="job-requirements"
                 name="requirements"
+                defaultValue={initialJob?.requirements.join("\n") ?? ""}
                 rows={5}
                 aria-describedby="requirements-help"
               />
               <small id="requirements-help">
-                Escreva um requisito por linha.
+                Escreva um requisito por linha, conforme o anúncio.
               </small>
             </div>
 
@@ -267,6 +293,9 @@ export default function NewApplication({
               <textarea
                 id="job-desirable"
                 name="desirable_requirements"
+                defaultValue={
+                  initialJob?.desirable_requirements.join("\n") ?? ""
+                }
                 rows={5}
                 aria-describedby="desirable-help"
               />

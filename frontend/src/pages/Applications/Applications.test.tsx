@@ -1,12 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import Applications from "./Applications";
-import { listJobApplications } from "../../api/applications";
+import { listJobApplications, deleteJobApplication } from "../../api/applications";
 import type { JobApplicationObject } from "../../types/api";
 
 vi.mock("../../api/applications", () => ({
   listJobApplications: vi.fn(),
+  deleteJobApplication: vi.fn(),
 }));
 
 const listMock = vi.mocked(listJobApplications);
@@ -154,5 +155,23 @@ describe("Listagem de candidaturas", () => {
     });
 
     expect(listMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("Exclusão na lista", () => {
+  afterEach(() => { cleanup(); vi.clearAllMocks(); });
+  it("remove somente a cópia escolhida entre duas vagas iguais", async () => {
+    const user = userEvent.setup();
+    vi.mocked(listJobApplications).mockResolvedValue([application, { ...application, application_id: "application-test-2" }]);
+    vi.mocked(deleteJobApplication).mockResolvedValue({ application_id: "application-test-2", deleted: true });
+    render(<Applications />);
+    await screen.findAllByText("Analista de Dados");
+    const rows = screen.getAllByRole("row");
+    await user.click(within(rows[2]).getByRole("button", { name: "Excluir oportunidade" }));
+    await user.click(within(rows[2]).getByRole("button", { name: "Confirmar exclusão" }));
+    expect(await screen.findByText("Oportunidade excluída da sua conta.")).toBeTruthy();
+    expect(deleteJobApplication).toHaveBeenCalledWith("application-test-2");
+    expect(screen.getAllByText("Analista de Dados")).toHaveLength(1);
+    expect(screen.getAllByRole("row")).toHaveLength(2);
   });
 });

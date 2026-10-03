@@ -590,3 +590,286 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.opportunity-search {
+  display: grid;
+  gap: 24px;
+}
+
+.opportunity-search-form fieldset {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  min-width: 0;
+}
+
+.opportunity-search-form input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text-h);
+  font: inherit;
+}
+
+.opportunity-search-form button {
+  padding: 12px 18px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+.opportunity-search-form button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.opportunity-results {
+  display: grid;
+  gap: 16px;
+}
+
+.opportunity-result {
+  display: grid;
+  gap: 12px;
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow-wrap: anywhere;
+}
+
+.opportunity-result details p {
+  margin-top: 12px;
+  white-space: pre-wrap;
+}
+
+.opportunity-result a {
+  color: var(--accent);
+}
+
+.profile-form {
+  display: grid;
+  gap: 24px;
+}
+
+.profile-form fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.profile-form legend {
+  padding: 0 8px;
+  font-weight: 600;
+}
+
+.profile-checkboxes {
+  display: grid;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.profile-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.profile-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.profile-entry {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.profile-entry h3 {
+  margin: 8px 0;
+}
+
+.profile-entry > button {
+  justify-self: start;
+}
+
+.resume-panel {
+  margin-top: 12px;
+  white-space: normal;
+}
+
+.resume-panel > div {
+  margin-top: 16px;
+}
+
+.resume-document {
+  min-width: 280px;
+  max-width: 760px;
+  padding: 24px;
+  margin: 16px 0;
+  background: #fff;
+  color: #111827;
+  text-align: left;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  overflow-wrap: anywhere;
+}
+
+.resume-document h2,
+.resume-document h3 {
+  color: #111827;
+}
+
+.resume-document h2 {
+  margin: 0 0 6px;
+}
+
+.resume-document h3 {
+  margin: 18px 0 8px;
+  font-size: 16px;
+  border-bottom: 1px solid #d1d5db;
+  padding-bottom: 4px;
+}
+
+.resume-document p {
+  margin: 4px 0;
+}
+
+.resume-document a {
+  color: #1d4ed8;
+}
+
+.resume-document ul {
+  padding-left: 20px;
+}
+
+.resume-review {
+  margin: 16px 0;
+  max-width: 760px;
+  white-space: normal;
+}
+
+.interview-panel {
+  margin-top: 12px;
+  white-space: normal;
+}
+
+.interview-panel details {
+  margin-top: 16px;
+}
+
+.interview-content {
+  max-width: 760px;
+  padding: 20px;
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.interview-question {
+  padding: 20px 0;
+  border-top: 1px solid var(--border);
+}
+
+.interview-question label {
+  display: block;
+  font-weight: 600;
+}
+
+.interview-question textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font: inherit;
+  color: var(--text-h);
+  background: var(--bg);
+  resize: vertical;
+}
+
+.resume-panel [role="alert"],
+.interview-panel [role="alert"] {
+  margin: 12px 0;
+  padding: 12px 16px;
+  border: 1px solid #dc2626;
+  border-radius: 8px;
+  background: #fff1f2;
+  color: #991b1b;
+  font-weight: 600;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.job-details-editor {
+  margin: 12px 0;
+  white-space: normal;
+}
+
+.job-details-editor summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.job-details-editor form {
+  margin-top: 12px;
+}
+
+.job-details-editor fieldset {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  margin: 12px 0;
+}
+
+.job-details-editor textarea {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  font: inherit;
+  resize: vertical;
+}
+
+.job-details-editor [role="alert"] {
+  padding: 12px;
+  border-radius: 8px;
+  background: #fff1f2;
+  color: #991b1b;
+  white-space: normal;
+}
+
+.job-details-editor [role="status"] {
+  padding: 12px;
+  border-radius: 8px;
+  background: #ecfdf5;
+  color: #065f46;
+  white-space: normal;
+}
+.auth-page { min-height: 100svh; display: grid; place-items: center; padding: 24px; box-sizing: border-box; }
+.auth-card { width: min(100%, 480px); text-align: left; }
+.auth-card h1 { font-size: 28px; }
+.auth-card fieldset { display: grid; gap: 12px; border: 0; padding: 16px 0; min-width: 0; }
+.auth-card input { width: 100%; padding: 12px; box-sizing: border-box; font: inherit; }
+.auth-card .form-help { margin-top: 16px; }
+.account-bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: flex-end; padding: 12px 24px; border-bottom: 1px solid var(--border); }

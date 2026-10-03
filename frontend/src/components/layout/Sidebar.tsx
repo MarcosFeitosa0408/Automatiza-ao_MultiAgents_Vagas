@@ -1,7 +1,9 @@
 export type NavigationPage =
   | "dashboard"
   | "applications"
-  | "new-application";
+  | "new-application"
+  | "opportunity-search"
+  | "profile";
 
 type SidebarProps = {
   activePage: NavigationPage;
@@ -14,6 +16,8 @@ const sidebarItems: {
   icon: string;
 }[] = [
   { page: "dashboard", label: "Dashboard", icon: "D" },
+  { page: "profile", label: "Meu perfil", icon: "P" },
+  { page: "opportunity-search", label: "Buscar oportunidades", icon: "B" },
   { page: "applications", label: "Candidaturas", icon: "C" },
   { page: "new-application", label: "Nova candidatura", icon: "+" },
 ];
@@ -35,9 +39,7 @@ export default function Sidebar({
       <nav className="sidebar-nav" aria-label="Navegação principal">
         {sidebarItems.map((item) => (
           <button
-            className={`sidebar-item${
-              activePage === item.page ? " active" : ""
-            }`}
+            className={`sidebar-item${activePage === item.page ? " active" : ""}`}
             key={item.page}
             type="button"
             aria-current={activePage === item.page ? "page" : undefined}
@@ -49,16 +51,6 @@ export default function Sidebar({
             <span>{item.label}</span>
           </button>
         ))}
-
-        <button
-          className="sidebar-item"
-          type="button"
-          disabled
-          title="Formulário disponível na próxima etapa"
-        >
-          <span className="sidebar-item-icon" aria-hidden="true">+</span>
-          <span>Nova candidatura · em breve</span>
-        </button>
       </nav>
 
       <div className="sidebar-footer">
