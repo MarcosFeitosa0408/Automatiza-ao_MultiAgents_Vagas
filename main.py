@@ -28,6 +28,7 @@ from fastapi.exceptions import RequestValidationError
 from core.accounts import get_store, AccountMemoryAgent, AccountJobRepository
 from core.auth_api import router as auth_router, require_user
 from core.admin_api import router as admin_router
+from core.web_hosting import configure_web_hosting
 
 
 def get_user_orchestrator(user=Depends(require_user)):
@@ -707,3 +708,6 @@ async def validation_error_handler(request: Request, exc: RequestValidationError
         {"loc": list(error["loc"]), "msg": error["msg"], "type": error["type"]}
         for error in exc.errors()
     ]})
+
+
+configure_web_hosting(app)
