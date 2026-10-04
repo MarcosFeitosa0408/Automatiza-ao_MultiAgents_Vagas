@@ -48,8 +48,8 @@ def session_result(store, user):
 def register(payload: RegisterRequest, request: Request):
     store = get_store()
     store.limit('register:' + (request.client.host if request.client else 'unknown'), 10)
-    user = store.create_user(payload.name, payload.email, payload.password.get_secret_value())
-    return session_result(store, user)
+    store.create_user(payload.name, payload.email, payload.password.get_secret_value())
+    return {'pending_approval': True, 'message': 'Conta criada. Aguarde a autorização do administrador.'}
 
 
 @router.post('/login')

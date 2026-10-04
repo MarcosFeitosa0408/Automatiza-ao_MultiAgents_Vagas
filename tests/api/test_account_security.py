@@ -15,7 +15,19 @@ def accounts(tmp_path, monkeypatch):
 def register(client, email='a@example.invalid'):
     response = client.post('/auth/register', json={'email': email, 'name': 'Teste', 'password': PASSWORD})
     assert response.status_code == 201, response.text
-    return response.json()
+    assert response.json()['pending_approval'] is True
+    assert 'access_token' not in response.json()
+    store = get_store()
+    with store.connection() as db:
+        target = db.execute('SELECT id FROM users WHERE email=?', (email,)).fetchone()['id']
+        admin = db.execute("SELECT user_id FROM account_access WHERE role='admin'").fetchone()
+    if admin:
+        store.change_access(admin['user_id'], target, 'authorize')
+    else:
+        store.bootstrap_admin(email, PASSWORD)
+    result = client.post('/auth/login', json={'email': email, 'password': PASSWORD})
+    assert result.status_code == 200, result.text
+    return result.json()
 
 def headers(session):
     return {'Authorization': 'Bearer ' + session['access_token']}

@@ -27,6 +27,7 @@ from copy import copy
 from fastapi.exceptions import RequestValidationError
 from core.accounts import get_store, AccountMemoryAgent, AccountJobRepository
 from core.auth_api import router as auth_router, require_user
+from core.admin_api import router as admin_router
 
 
 def get_user_orchestrator(user=Depends(require_user)):
@@ -51,6 +52,7 @@ app.add_middleware(
 )
 
 app.include_router(auth_router)
+app.include_router(admin_router)
 app.include_router(opportunity_search_router, dependencies=[Depends(require_user)])
 
 def initialize_configured_database() -> None:

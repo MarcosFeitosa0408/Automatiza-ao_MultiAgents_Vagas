@@ -10,7 +10,7 @@ def isolate_legacy_tests(request, monkeypatch):
             profile_path = str(Path(__file__).parent / 'fixtures/profile.json')
         original_init(self, profile_path)
     monkeypatch.setattr(MemoryAgent, '__init__', initialize)
-    if request.node.path.name == 'test_account_security.py':
+    if request.node.path.name in ('test_account_security.py', 'test_admin_security.py'):
         yield
         return
     if 'api' in request.node.path.parts:

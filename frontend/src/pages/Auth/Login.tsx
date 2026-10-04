@@ -11,6 +11,7 @@ export default function Login({ onAuthenticated, message }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const pending = useRef(false);
+  const [notice, setNotice] = useState("");
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -28,11 +29,16 @@ export default function Login({ onAuthenticated, message }: Props) {
     pending.current = true;
     setBusy(true);
     try {
-      const session = registering
-        ? await registerAccount(name, email, password)
-        : await loginAccount(email, password);
-      form.reset();
-      onAuthenticated(session);
+      if (registering) {
+        const result = await registerAccount(name, email, password);
+        form.reset();
+        setNotice(result.message);
+        setRegistering(false);
+      } else {
+        const session = await loginAccount(email, password);
+        form.reset();
+        onAuthenticated(session);
+      }
     } catch (cause) {
       if (cause instanceof ApiError) {
         const body = cause.detail as { detail?: unknown } | null;
@@ -51,8 +57,9 @@ export default function Login({ onAuthenticated, message }: Props) {
       <section className="dashboard-panel auth-card">
         <p className="dashboard-eyebrow">MULTIAGENTS VAGAS</p>
         <h1>{registering ? "Criar minha conta" : "Entrar na plataforma"}</h1>
-        <p>Seu perfil e suas oportunidades pertencem à sua conta.</p>
+        <p>Seu perfil e suas oportunidades pertencem à sua conta. Novos cadastros precisam da autorização do administrador.</p>
         {message && <p role="status">{message}</p>}
+        {notice && <p role="status">{notice}</p>}
         {error && <p className="dashboard-error" role="alert">{error}</p>}
         <form onSubmit={submit} key={registering ? "register" : "login"}>
           <fieldset disabled={busy}>
@@ -70,7 +77,7 @@ export default function Login({ onAuthenticated, message }: Props) {
               <label htmlFor="account-confirmation">Confirmar senha</label>
               <input id="account-confirmation" type="password" name="confirmation" autoComplete="new-password" required minLength={15} maxLength={128} />
             </>}
-            <button className="primary-button" type="submit">{busy ? "Aguarde..." : registering ? "Cadastrar e entrar" : "Entrar"}</button>
+            <button className="primary-button" type="submit">{busy ? "Aguarde..." : registering ? "Solicitar acesso" : "Entrar"}</button>
           </fieldset>
         </form>
         <button className="secondary-button" type="button" disabled={busy} onClick={() => { setRegistering(!registering); setError(null); }}>

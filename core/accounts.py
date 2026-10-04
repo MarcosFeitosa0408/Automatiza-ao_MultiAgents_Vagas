@@ -1,4 +1,4 @@
-"""Contas e dados privados persistentes do MVP local (SQLite)."""
+"""Contas privadas: SQLite local ou Postgres configurado explicitamente."""
 import hashlib
 import os
 import secrets
@@ -7,6 +7,9 @@ import time
 from contextlib import contextmanager
 from pathlib import Path
 from uuid import uuid4
+from functools import lru_cache
+
+import psycopg
 
 from fastapi import HTTPException
 from pwdlib import PasswordHash
@@ -63,6 +66,14 @@ class AccountStore:
                 CREATE TABLE IF NOT EXISTS attempts (
                     bucket TEXT NOT NULL, occurred_at REAL NOT NULL);
                 CREATE INDEX IF NOT EXISTS attempts_bucket ON attempts(bucket, occurred_at);
+                CREATE TABLE IF NOT EXISTS account_access (
+                    user_id TEXT PRIMARY KEY REFERENCES users(id),
+                    state TEXT NOT NULL CHECK(state IN ('pending', 'active', 'blocked')),
+                    role TEXT NOT NULL CHECK(role IN ('user', 'admin')));
+                CREATE TABLE IF NOT EXISTS admin_audit (
+                    id TEXT PRIMARY KEY, actor_id TEXT NOT NULL,
+                    target_id TEXT NOT NULL, action TEXT NOT NULL,
+                    occurred_at REAL NOT NULL);
             ''')
 
     @contextmanager
@@ -94,9 +105,10 @@ class AccountStore:
             with self.connection() as db:
                 db.execute('INSERT INTO users VALUES (?, ?, ?, ?)', (user_id, email, name, hashed))
                 db.execute('INSERT INTO profiles VALUES (?, ?)', (user_id, profile.model_dump_json()))
-        except sqlite3.IntegrityError:
+                db.execute('INSERT INTO account_access VALUES (?, ?, ?)', (user_id, 'pending', 'user'))
+        except (sqlite3.IntegrityError, psycopg.errors.UniqueViolation):
             raise HTTPException(409, 'Não foi possível cadastrar com esse e-mail.') from None
-        return dict(id=user_id, name=name, email=email)
+        return dict(id=user_id, name=name, email=email, role='user', state='pending')
 
     def check_password(self, email: str, password: str):
         with self.connection() as db:
@@ -104,19 +116,29 @@ class AccountStore:
         valid = password_hash.verify(password, row['password_hash'] if row else _dummy_hash)
         if not row or not valid:
             raise HTTPException(401, 'E-mail ou senha incorretos.')
-        return {key: row[key] for key in ('id', 'name', 'email')}
+        with self.connection() as db:
+            access = self._user(db, row['id'])
+        if access['state'] != 'active':
+            message = 'Sua conta aguarda autorização do administrador.' if access['state'] == 'pending' else 'Seu acesso foi bloqueado pelo administrador.'
+            raise HTTPException(403, message)
+        return access
 
     def issue_session(self, user_id: str):
         token = secrets.token_urlsafe(48)
         with self.connection() as db:
+            db.execute('BEGIN IMMEDIATE')
+            user = self._user(db, user_id)
+            if not user or user['state'] != 'active':
+                raise HTTPException(403, 'Esta conta não está autorizada.')
             db.execute('DELETE FROM sessions WHERE expires_at <= ?', (time.time(),))
             db.execute('INSERT INTO sessions VALUES (?, ?, ?)', (hashlib.sha256(token.encode()).hexdigest(), user_id, time.time() + SESSION_SECONDS))
         return token
 
     def current_user(self, token: str):
         with self.connection() as db:
-            row = db.execute('''SELECT u.id, u.name, u.email FROM sessions s
-                JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>?''',
+            row = db.execute('''SELECT u.id, u.name, u.email, a.role, a.state FROM sessions s
+                JOIN users u ON u.id=s.user_id JOIN account_access a ON a.user_id=u.id
+                WHERE a.state='active' AND s.token_hash=? AND s.expires_at>?''',
                 (hashlib.sha256(token.encode()).hexdigest(), time.time())).fetchone()
         if not row:
             raise HTTPException(401, 'Entre na sua conta para continuar.', headers={'WWW-Authenticate': 'Bearer'})
@@ -126,9 +148,156 @@ class AccountStore:
         with self.connection() as db:
             db.execute('DELETE FROM sessions WHERE token_hash=?', (hashlib.sha256(token.encode()).hexdigest(),))
 
+    def _user(self, db, user_id):
+        row = db.execute('''SELECT u.id, u.name, u.email,
+            COALESCE(a.role, 'user') AS role, COALESCE(a.state, 'pending') AS state
+            FROM users u LEFT JOIN account_access a ON a.user_id=u.id WHERE u.id=?''',
+            (user_id,)).fetchone()
+        return dict(row) if row else None
+
+    def bootstrap_admin(self, email: str, password: str):
+        """Somente CLI local: prova a senha da conta existente e instala o primeiro administrador."""
+        with self.connection() as db:
+            row = db.execute('SELECT * FROM users WHERE email=?', (email,)).fetchone()
+        valid = password_hash.verify(password, row['password_hash'] if row else _dummy_hash)
+        if not row or not valid:
+            raise HTTPException(401, 'E-mail ou senha incorretos.')
+        with self.connection() as db:
+            db.execute('BEGIN IMMEDIATE')
+            admin = db.execute("SELECT user_id FROM account_access WHERE role='admin'", ()).fetchone()
+            if admin and admin['user_id'] != row['id']:
+                raise ValueError('Já existe um administrador. Operação cancelada.')
+            db.execute('''INSERT INTO account_access VALUES (?, 'active', 'admin')
+                ON CONFLICT(user_id) DO UPDATE SET state='active', role='admin' ''', (row['id'],))
+            db.execute('DELETE FROM sessions WHERE user_id=?', (row['id'],))
+            return self._user(db, row['id'])
+
+    def _require_admin(self, db, actor_id):
+        actor = self._user(db, actor_id)
+        if not actor or actor['role'] != 'admin' or actor['state'] != 'active':
+            raise HTTPException(403, 'Acesso exclusivo do administrador.')
+
+    def list_accounts(self, actor_id):
+        with self.connection() as db:
+            self._require_admin(db, actor_id)
+            rows = db.execute('''SELECT u.id, u.name, u.email,
+                COALESCE(a.role, 'user') AS role, COALESCE(a.state, 'pending') AS state
+                FROM users u LEFT JOIN account_access a ON a.user_id=u.id ORDER BY u.email''').fetchall()
+        return [dict(row) for row in rows]
+
+    def change_access(self, actor_id, target_id, action):
+        transitions = {'authorize': ('pending', 'active'), 'block': ('active', 'blocked'), 'reactivate': ('blocked', 'active')}
+        if action not in transitions:
+            raise HTTPException(422, 'Ação inválida.')
+        with self.connection() as db:
+            db.execute('BEGIN IMMEDIATE')
+            self._require_admin(db, actor_id)
+            target = self._user(db, target_id)
+            if not target:
+                raise HTTPException(404, 'Conta não encontrada.')
+            if target['role'] == 'admin' or target_id == actor_id:
+                raise HTTPException(403, 'A conta do administrador está protegida.')
+            before, after = transitions[action]
+            if target['state'] != before:
+                raise HTTPException(409, 'O estado da conta mudou. Atualize a lista.')
+            db.execute('''INSERT INTO account_access VALUES (?, ?, 'user')
+                ON CONFLICT(user_id) DO UPDATE SET state=excluded.state''', (target_id, after))
+            db.execute('DELETE FROM sessions WHERE user_id=?', (target_id,))
+            db.execute('INSERT INTO admin_audit VALUES (?, ?, ?, ?, ?)', (str(uuid4()), actor_id, target_id, action, time.time()))
+            return self._user(db, target_id)
+
+    def delete_account(self, actor_id, target_id, confirmation_email):
+        with self.connection() as db:
+            db.execute('BEGIN IMMEDIATE')
+            self._require_admin(db, actor_id)
+            target = self._user(db, target_id)
+            if not target:
+                raise HTTPException(404, 'Conta não encontrada.')
+            if target['role'] == 'admin' or target_id == actor_id:
+                raise HTTPException(403, 'A conta do administrador está protegida.')
+            if confirmation_email.strip().casefold() != target['email']:
+                raise HTTPException(422, 'Digite o e-mail da conta para confirmar a exclusão.')
+            for table in ('sessions', 'profiles', 'private_applications', 'account_access'):
+                db.execute(f'DELETE FROM {table} WHERE user_id=?', (target_id,))
+            db.execute('DELETE FROM users WHERE id=?', (target_id,))
+            db.execute('INSERT INTO admin_audit VALUES (?, ?, ?, ?, ?)', (str(uuid4()), actor_id, target_id, 'delete', time.time()))
+        return {'deleted': True, 'user_id': target_id}
+
 
 def get_store() -> AccountStore:
+    url = os.getenv('ACCOUNT_DATABASE_URL', '').strip()
+    if url:
+        return _postgres_store(url)
     return AccountStore(os.getenv('ACCOUNT_DATABASE_PATH', 'data/private/accounts.sqlite3'))
+
+
+class _AccountRow(dict):
+    """Compatibilidade com os acessos por nome e índice usados no SQLite."""
+
+    def __getitem__(self, key):
+        if isinstance(key, int):
+            return tuple(self.values())[key]
+        return super().__getitem__(key)
+
+
+def _account_row_factory(cursor):
+    names = [column.name for column in cursor.description] if cursor.description else []
+    return lambda values: _AccountRow(zip(names, values))
+
+
+class _PostgresConnection:
+    def __init__(self, connection):
+        self.connection = connection
+
+    def execute(self, query, parameters=None):
+        if query.strip().upper() == 'BEGIN IMMEDIATE':
+            # Transacional e compatível com o pool do Neon. Serializa limites/importações.
+            return self.connection.execute('SELECT pg_advisory_xact_lock(7347844601)')
+        # Apenas SQL interno parametrizado: nenhum valor é interpolado no texto.
+        if parameters is not None:
+            query = query.replace('%', '%%').replace('?', '%s')
+        return self.connection.execute(query, parameters)
+
+
+class PostgresAccountStore(AccountStore):
+    def __init__(self, url: str):
+        if not url.startswith(('postgresql://', 'postgres://')):
+            raise ValueError('ACCOUNT_DATABASE_URL precisa ser uma conexão Postgres.')
+        try:
+            options = psycopg.conninfo.conninfo_to_dict(url)
+        except psycopg.Error:
+            raise ValueError('Conexão Postgres inválida. Confira a configuração.') from None
+        if options.get('sslmode') not in (None, 'require', 'verify-ca', 'verify-full'):
+            raise ValueError('A conexão Postgres precisa usar SSL.')
+        options.setdefault('sslmode', 'require')
+        self._options = options
+        with self.connection() as db:
+            db.execute('SELECT pg_advisory_xact_lock(7347844602)')
+            for statement in (
+                'CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, email TEXT UNIQUE NOT NULL, name TEXT NOT NULL, password_hash TEXT NOT NULL)',
+                'CREATE TABLE IF NOT EXISTS sessions (token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), expires_at DOUBLE PRECISION NOT NULL)',
+                'CREATE TABLE IF NOT EXISTS profiles (user_id TEXT PRIMARY KEY REFERENCES users(id), payload TEXT NOT NULL)',
+                'CREATE TABLE IF NOT EXISTS private_applications (user_id TEXT NOT NULL REFERENCES users(id), application_id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(user_id, application_id))',
+                'CREATE TABLE IF NOT EXISTS attempts (bucket TEXT NOT NULL, occurred_at DOUBLE PRECISION NOT NULL)',
+                'CREATE INDEX IF NOT EXISTS attempts_bucket ON attempts(bucket, occurred_at)',
+                "CREATE TABLE IF NOT EXISTS account_access (user_id TEXT PRIMARY KEY REFERENCES users(id), state TEXT NOT NULL CHECK(state IN ('pending', 'active', 'blocked')), role TEXT NOT NULL CHECK(role IN ('user', 'admin')))",
+                'CREATE TABLE IF NOT EXISTS admin_audit (id TEXT PRIMARY KEY, actor_id TEXT NOT NULL, target_id TEXT NOT NULL, action TEXT NOT NULL, occurred_at DOUBLE PRECISION NOT NULL)',
+            ):
+                db.execute(statement)
+
+    @contextmanager
+    def connection(self):
+        try:
+            with psycopg.connect(**self._options, connect_timeout=15,
+                                 row_factory=_account_row_factory, prepare_threshold=None) as db:
+                yield _PostgresConnection(db)
+        except psycopg.OperationalError:
+            raise RuntimeError('Não foi possível conectar ao banco de contas. Confira a configuração do servidor.') from None
+
+
+@lru_cache(maxsize=4)
+def _postgres_store(url: str) -> PostgresAccountStore:
+    return PostgresAccountStore(url)
 
 
 class AccountMemoryAgent:

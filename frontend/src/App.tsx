@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 import Platform from "./Platform";
+import AdminAccounts from "./pages/Admin/AdminAccounts";
 import Login from "./pages/Auth/Login";
 import { logoutAccount } from "./api/auth";
 import type { AccountSession, AccountUser } from "./api/auth";
@@ -10,6 +11,7 @@ import { ApiError } from "./api/client";
 export default function App() {
   const [user, setUser] = useState<AccountUser | null>(null);
   const [message, setMessage] = useState("");
+  const [adminOpen, setAdminOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,6 +28,7 @@ export default function App() {
   function authenticated(session: AccountSession) {
     setAccessToken(session.access_token);
     setUser(session.user);
+    setAdminOpen(false);
     setMessage("");
     setError(null);
   }
@@ -55,9 +58,10 @@ export default function App() {
   return <>
     <div className="account-bar">
       <span>Conta: {user.email}</span>
+      {user.role === "admin" && <button className="secondary-button" type="button" onClick={() => setAdminOpen(!adminOpen)}>{adminOpen ? "Voltar à plataforma" : "Administrar acessos"}</button>}
       <button type="button" className="secondary-button" onClick={logout} disabled={loggingOut}>{loggingOut ? "Saindo..." : "Sair da conta"}</button>
       {error && <p role="alert">{error}</p>}
     </div>
-    <Platform key={user.id} />
+    {user.role === "admin" && adminOpen ? <AdminAccounts /> : <Platform key={user.id} />}
   </>;
 }
