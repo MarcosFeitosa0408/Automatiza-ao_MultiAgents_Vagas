@@ -57,6 +57,7 @@ export default function App() {
 
   return <>
     <div className="account-bar">
+      <span>Bem-vindo, {user.name}! <span aria-hidden="true">🚀😊</span> Vamos dar mais um passo na sua preparação?</span>
       <span>Conta: {user.email}</span>
       {user.role === "admin" && <button className="secondary-button" type="button" onClick={() => setAdminOpen(!adminOpen)}>{adminOpen ? "Voltar à plataforma" : "Administrar acessos"}</button>}
       <button type="button" className="secondary-button" onClick={logout} disabled={loggingOut}>{loggingOut ? "Saindo..." : "Sair da conta"}</button>

@@ -22,6 +22,9 @@ from agents.agent_08_interview.interview_agent import (
     InterviewAgent,
     InterviewPlan,
 )
+from agents.agent_08_interview.interview_feedback import (
+    FeedbackRequest, InterviewFeedback, evaluate_answer,
+)
 
 from copy import copy
 from fastapi.exceptions import RequestValidationError
@@ -631,6 +634,17 @@ def generate_interview_plan(application_id: str, orchestrator: JobOrchestrator =
         ) from None
 
     return InterviewAgent().prepare(application.job, profile)
+
+
+@app.post('/job-applications/{application_id}/interview-feedback', response_model=InterviewFeedback)
+def interview_feedback(application_id: str, payload: FeedbackRequest,
+                       orchestrator: JobOrchestrator = Depends(get_user_orchestrator)):
+    plan = generate_interview_plan(application_id, orchestrator)
+    question = next((item for item in plan.questions
+                     if item.question_id == payload.question_id), None)
+    if question is None:
+        raise HTTPException(422, 'Pergunta não encontrada. Prepare o roteiro novamente.')
+    return evaluate_answer(question, payload.answer)
 
 
 from core.schemas.api import JobDetailsUpdateRequest

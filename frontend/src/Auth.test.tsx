@@ -30,6 +30,7 @@ describe("Privacidade na interface", () => {
     const user = await fillLogin();
     await user.click(screen.getByRole("button", { name: /^Entrar$/ }));
     expect(await screen.findByText("Área privada do candidato")).toBeTruthy();
+    expect(screen.getByText(/Bem-vindo, Pessoa teste!/)).toBeTruthy();
     expect(getAccessToken()).toBe(session.access_token);
     expect(screen.queryByRole("button", { name: "Administrar acessos" })).toBeNull();
     await user.click(screen.getByRole("button", { name: "Sair da conta" }));

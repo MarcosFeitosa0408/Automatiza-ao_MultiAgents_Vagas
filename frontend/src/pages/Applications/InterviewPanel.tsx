@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { ApiError } from "../../api/client";
-import { generateInterviewPlan } from "../../api/interview";
-import type { InterviewPlan } from "../../api/interview";
+import { generateInterviewPlan, evaluateInterviewAnswer } from "../../api/interview";
+import type { InterviewPlan, InterviewFeedback } from "../../api/interview";
 
 type InterviewPanelProps = {
   applicationId: string;
@@ -30,6 +30,27 @@ export default function InterviewPanel({
   const [error, setError] = useState<string | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const submitting = useRef(false);
+  const [feedback, setFeedback] = useState<Record<string, InterviewFeedback>>({});
+  const [evaluating, setEvaluating] = useState<string | null>(null);
+  const [evaluationErrors, setEvaluationErrors] = useState<Record<string, string>>({});
+
+  async function evaluate(questionId: string) {
+    if (submitting.current) return;
+    const answer = answers[questionId] ?? "";
+    if (!answer.trim()) return;
+    submitting.current = true;
+    setEvaluating(questionId);
+    setEvaluationErrors({});
+    try {
+      const result = await evaluateInterviewAnswer(applicationId, questionId, answer);
+      setFeedback((current) => ({ ...current, [questionId]: result }));
+    } catch (cause) {
+      setEvaluationErrors({ [questionId]: describeError(cause) });
+    } finally {
+      submitting.current = false;
+      setEvaluating(null);
+    }
+  }
 
   async function generate() {
     if (submitting.current) return;
@@ -41,6 +62,8 @@ export default function InterviewPanel({
     try {
       const result = await generateInterviewPlan(applicationId);
       setPlan(result);
+      setFeedback({});
+      setEvaluationErrors({});
     } catch (cause) {
       setError(describeError(cause));
     } finally {
@@ -55,7 +78,7 @@ export default function InterviewPanel({
         className="secondary-button"
         type="button"
         onClick={generate}
-        disabled={loading}
+        disabled={loading || evaluating !== null}
       >
         {loading ? "Preparando..." : "Preparar entrevista"}
       </button>
@@ -73,7 +96,9 @@ export default function InterviewPanel({
             <p>
               Pratique com suas próprias palavras. As respostas digitadas
               ficam apenas nesta tela e serão perdidas ao sair ou atualizar
-              a página. Ainda não há avaliação automática.
+              a página. Ao clicar em Avaliar resposta, o texto será enviado
+              ao servidor para avaliar sua estrutura, sem salvar a resposta.
+              A nota não mede correção técnica nem prevê aprovação.
             </p>
 
             <ul>
@@ -105,15 +130,42 @@ export default function InterviewPanel({
                   <textarea
                     id={id}
                     rows={6}
+                    maxLength={6000}
+                    disabled={loading || evaluating !== null}
                     placeholder="Escreva sua resposta para praticar..."
                     value={answers[question.question_id] ?? ""}
-                    onChange={(event) =>
+                    onChange={(event) => {
                       setAnswers((current) => ({
                         ...current,
                         [question.question_id]: event.target.value,
-                      }))
-                    }
+                      }));
+                      setFeedback((current) => {
+                        const next = { ...current };
+                        delete next[question.question_id];
+                        return next;
+                      });
+                      setEvaluationErrors({});
+                    }}
                   />
+                  <button className="secondary-button" type="button"
+                    disabled={loading || evaluating !== null || !(answers[question.question_id] ?? "").trim()}
+                    onClick={() => evaluate(question.question_id)}>
+                    {evaluating === question.question_id ? "Avaliando..." : "Avaliar resposta"}
+                  </button>
+                  {evaluationErrors[question.question_id] && <p role="alert">{evaluationErrors[question.question_id]}</p>}
+                  {feedback[question.question_id] && <div role="status">
+                    <h4>Nota de estrutura: {feedback[question.question_id].score}/100</h4>
+                    <p>{feedback[question.question_id].score >= 75
+                      ? <><span aria-hidden="true">🎉👏</span> Muito bem! Sua resposta apresenta vários indícios de estrutura. Confira as orientações.</>
+                      : feedback[question.question_id].score >= 40
+                        ? <><span aria-hidden="true">🙂💪</span> Você está avançando! Confira as sugestões e tente novamente.</>
+                        : <><span aria-hidden="true">😕💙</span> Ainda podemos desenvolver essa resposta. Vamos praticar juntos?</>}</p>
+                    <ul>{feedback[question.question_id].criteria.map((criterion) => (
+                      <li key={criterion.name}><strong>{criterion.name}: {criterion.score}/{criterion.maximum}</strong> — {criterion.guidance}</li>
+                    ))}</ul>
+                    <p>{feedback[question.question_id].limitation}</p>
+                    <p>Edite sua resposta e avalie novamente para praticar. Use somente experiências e resultados reais.</p>
+                  </div>}
                 </section>
               );
             })}
