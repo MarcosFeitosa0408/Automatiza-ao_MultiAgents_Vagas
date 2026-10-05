@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 import Platform from "./Platform";
+import PlatformGuide from "./components/PlatformGuide";
 import AdminAccounts from "./pages/Admin/AdminAccounts";
 import Login from "./pages/Auth/Login";
 import { logoutAccount } from "./api/auth";
@@ -63,6 +64,7 @@ export default function App() {
       <button type="button" className="secondary-button" onClick={logout} disabled={loggingOut}>{loggingOut ? "Saindo..." : "Sair da conta"}</button>
       {error && <p role="alert">{error}</p>}
     </div>
+        <PlatformGuide key={`guide-${user.id}`} />
     {user.role === "admin" && adminOpen ? <AdminAccounts /> : <Platform key={user.id} />}
   </>;
 }
