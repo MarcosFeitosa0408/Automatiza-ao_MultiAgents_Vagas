@@ -1,12 +1,31 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { loginAccount, registerAccount } from "../../api/auth";
 import type { AccountSession } from "../../api/auth";
+import PasswordRecovery from "./PasswordRecovery";
 import { ApiError } from "../../api/client";
 
 type Props = { onAuthenticated: (session: AccountSession) => void; message?: string };
 
 export default function Login({ onAuthenticated, message }: Props) {
+  const [recovery, setRecovery] = useState(false);
+  const [resetToken, setResetToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    function readRecoveryLink() {
+      if (window.location.hash.startsWith("#/redefinir-senha?")) {
+        const token = new URLSearchParams(window.location.hash.split("?")[1]).get("token") ?? "";
+        setResetToken(token);
+        setRecovery(true);
+        // Guarda apenas em memória: remove o segredo da barra de endereço e do histórico atual.
+        window.history.replaceState(null, "", window.location.pathname + window.location.search);
+      }
+    }
+    readRecoveryLink();
+    window.addEventListener("hashchange", readRecoveryLink);
+  return () => window.removeEventListener("hashchange", readRecoveryLink);
+  }, []);
+
   const [registering, setRegistering] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,6 +71,14 @@ export default function Login({ onAuthenticated, message }: Props) {
     }
   }
 
+  if (recovery) return <PasswordRecovery token={resetToken} onBack={(success) => {
+    setResetToken(null);
+    setRecovery(false);
+    setRegistering(false);
+    setError(null);
+    setNotice(success ?? "");
+  }} />;
+
   return (
     <main className="auth-page">
       <section className="dashboard-panel auth-card">
@@ -83,7 +110,8 @@ export default function Login({ onAuthenticated, message }: Props) {
         <button className="secondary-button" type="button" disabled={busy} onClick={() => { setRegistering(!registering); setError(null); }}>
           {registering ? "Já tenho uma conta" : "Criar conta"}
         </button>
-        <p className="form-help">Ao recarregar ou fechar esta aba, será necessário entrar novamente. Guarde sua senha: a recuperação por e-mail ainda não está disponível.</p>
+        {!registering && <button className="secondary-button" type="button" disabled={busy} onClick={() => { setResetToken(null); setRecovery(true); }}>Esqueci minha senha</button>}
+        <p className="form-help">Ao recarregar ou fechar esta aba, será necessário entrar novamente.</p>
       </section>
     </main>
   );

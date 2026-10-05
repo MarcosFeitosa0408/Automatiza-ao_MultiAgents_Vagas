@@ -70,6 +70,9 @@ class AccountStore:
                     user_id TEXT PRIMARY KEY REFERENCES users(id),
                     state TEXT NOT NULL CHECK(state IN ('pending', 'active', 'blocked')),
                     role TEXT NOT NULL CHECK(role IN ('user', 'admin')));
+                CREATE TABLE IF NOT EXISTS password_resets (
+                    token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    expires_at DOUBLE PRECISION NOT NULL);
                 CREATE TABLE IF NOT EXISTS admin_audit (
                     id TEXT PRIMARY KEY, actor_id TEXT NOT NULL,
                     target_id TEXT NOT NULL, action TEXT NOT NULL,
@@ -281,6 +284,7 @@ class PostgresAccountStore(AccountStore):
                 'CREATE TABLE IF NOT EXISTS attempts (bucket TEXT NOT NULL, occurred_at DOUBLE PRECISION NOT NULL)',
                 'CREATE INDEX IF NOT EXISTS attempts_bucket ON attempts(bucket, occurred_at)',
                 "CREATE TABLE IF NOT EXISTS account_access (user_id TEXT PRIMARY KEY REFERENCES users(id), state TEXT NOT NULL CHECK(state IN ('pending', 'active', 'blocked')), role TEXT NOT NULL CHECK(role IN ('user', 'admin')))",
+                'CREATE TABLE IF NOT EXISTS password_resets (token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, expires_at DOUBLE PRECISION NOT NULL)',
                 'CREATE TABLE IF NOT EXISTS admin_audit (id TEXT PRIMARY KEY, actor_id TEXT NOT NULL, target_id TEXT NOT NULL, action TEXT NOT NULL, occurred_at DOUBLE PRECISION NOT NULL)',
             ):
                 db.execute(statement)

@@ -1,0 +1,55 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import Login from "./Login";
+import { requestPasswordRecovery, resetAccountPassword } from "../../api/auth";
+import { ApiError } from "../../api/client";
+vi.mock("../../api/auth", () => ({ requestPasswordRecovery: vi.fn(), resetAccountPassword: vi.fn(), loginAccount: vi.fn(), registerAccount: vi.fn() }));
+afterEach(() => { cleanup(); vi.resetAllMocks(); window.history.replaceState(null, "", "/"); });
+describe("Recuperação de senha", () => {
+  it("solicita um link sem autenticar e preserva o e-mail após erro", async () => {
+    const authenticated = vi.fn();
+    vi.mocked(requestPasswordRecovery).mockRejectedValueOnce(new ApiError(503, { detail: "Serviço não configurado" })).mockResolvedValueOnce({ message: "Se houver uma conta, receberá um link." });
+    const user = userEvent.setup();
+    render(<Login onAuthenticated={authenticated} />);
+    await user.click(screen.getByRole("button", { name: "Esqueci minha senha" }));
+    await user.type(screen.getByLabelText("E-mail de acesso"), "teste@example.invalid");
+    await user.click(screen.getByRole("button", { name: "Enviar link de recuperação" }));
+    expect(await screen.findByRole("alert")).toHaveProperty("textContent", "Serviço não configurado");
+    expect((screen.getByLabelText("E-mail de acesso") as HTMLInputElement).value).toBe("teste@example.invalid");
+    await user.click(screen.getByRole("button", { name: "Enviar link de recuperação" }));
+    expect(await screen.findByRole("status")).toHaveProperty("textContent", "Se houver uma conta, receberá um link.");
+    expect(authenticated).not.toHaveBeenCalled();
+  });
+  it("remove o token da URL, exige confirmação e volta ao login após redefinir", async () => {
+    const token = "a".repeat(64);
+    window.history.replaceState(null, "", "/#/redefinir-senha?token=" + token);
+    const user = userEvent.setup();
+    vi.mocked(resetAccountPassword).mockResolvedValue({ message: "Senha atualizada." });
+    render(<Login onAuthenticated={vi.fn()} />);
+    expect(await screen.findByRole("heading", { name: "Criar nova senha" })).toBeTruthy();
+    expect(window.location.hash).toBe("");
+    await user.type(screen.getByLabelText("Nova senha", { exact: true }), "Uma senha longa segura!");
+    await user.type(screen.getByLabelText("Confirmar nova senha"), "Outra senha longa segura!");
+    await user.click(screen.getByRole("button", { name: "Salvar nova senha" }));
+    expect(await screen.findByRole("alert")).toHaveProperty("textContent", "As senhas não coincidem.");
+    expect(resetAccountPassword).not.toHaveBeenCalled();
+    await user.clear(screen.getByLabelText("Confirmar nova senha"));
+    await user.type(screen.getByLabelText("Confirmar nova senha"), "Uma senha longa segura!");
+    await user.click(screen.getByRole("button", { name: "Salvar nova senha" }));
+    expect(resetAccountPassword).toHaveBeenCalledWith(token, "Uma senha longa segura!");
+    expect(await screen.findByRole("heading", { name: "Entrar na plataforma" })).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toBe("Senha atualizada.");
+  });
+  it("mantém o formulário e mostra erro de link expirado", async () => {
+    window.history.replaceState(null, "", "/#/redefinir-senha?token=" + "b".repeat(64));
+    vi.mocked(resetAccountPassword).mockRejectedValue(new ApiError(400, { detail: "Link expirado" }));
+    const user = userEvent.setup();
+    render(<Login onAuthenticated={vi.fn()} />);
+    await screen.findByRole("heading", { name: "Criar nova senha" });
+    for (const label of ["Nova senha", "Confirmar nova senha"]) await user.type(screen.getByLabelText(label, { exact: true }), "Uma senha longa segura!");
+    await user.click(screen.getByRole("button", { name: "Salvar nova senha" }));
+    expect(await screen.findByRole("alert")).toHaveProperty("textContent", "Link expirado");
+    expect(screen.getByRole("heading", { name: "Criar nova senha" })).toBeTruthy();
+  });
+});

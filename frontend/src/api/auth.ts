@@ -11,3 +11,10 @@ export function registerAccount(name: string, email: string, password: string): 
 export function logoutAccount() {
   return apiRequest("/auth/logout", { method: "POST" });
 }
+
+export function requestPasswordRecovery(email: string): Promise<{ message: string }> {
+  return apiRequest("/auth/forgot-password", { method: "POST", body: JSON.stringify({ email }) });
+}
+export function resetAccountPassword(token: string, password: string): Promise<{ message: string }> {
+  return apiRequest("/auth/reset-password", { method: "POST", body: JSON.stringify({ token, password }) });
+}

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
 from core.accounts import get_store
@@ -69,3 +69,35 @@ def me(user=Depends(require_user)):
 def logout(user=Depends(require_user), credentials=Depends(bearer)):
     get_store().revoke(credentials.credentials)
     return {'logged_out': True}
+
+
+class RecoveryRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    email: str = Field(min_length=3, max_length=254)
+    normalize_email = field_validator('email')(LoginRequest.normalize_email.__func__)
+
+
+class ResetPasswordRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    token: SecretStr = Field(min_length=64, max_length=64)
+    password: SecretStr = Field(min_length=15, max_length=128)
+
+
+@router.post('/forgot-password', status_code=202)
+def forgot_password(payload: RecoveryRequest, request: Request, background: BackgroundTasks):
+    import hashlib
+    from core.password_recovery import mail_settings, deliver_recovery
+    store = get_store()
+    store.limit('recovery-ip:' + (request.client.host if request.client else 'unknown'), 10)
+    store.limit('recovery-email:' + hashlib.sha256(payload.email.encode()).hexdigest(), 3)
+    settings = mail_settings()
+    background.add_task(deliver_recovery, store, payload.email, settings)
+    return {'message': 'Se houver uma conta com esse e-mail, você receberá um link de recuperação. Confira também a pasta de spam. O link vale por 30 minutos.'}
+
+
+@router.post('/reset-password')
+def change_forgotten_password(payload: ResetPasswordRequest, request: Request):
+    from core.password_recovery import reset_password
+    store = get_store()
+    store.limit('reset-ip:' + (request.client.host if request.client else 'unknown'), 10)
+    return reset_password(store, payload.token.get_secret_value(), payload.password.get_secret_value())
