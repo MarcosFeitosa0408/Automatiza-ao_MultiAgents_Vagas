@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { ApiError } from "../../api/client";
 import { generateResumePreview } from "../../api/resume";
 import type { ResumePreview } from "../../api/resume";
+import { printResume } from "./printResume";
 
 type ResumePanelProps = {
   applicationId: string;
@@ -31,6 +32,18 @@ export default function ResumePanel({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const submitting = useRef(false);
+  const documentRef = useRef<HTMLElement | null>(null);
+  const [pdfError, setPdfError] = useState<string | null>(null);
+
+  function savePdf() {
+    if (!preview || !documentRef.current) return;
+    setPdfError(null);
+    try {
+      printResume(documentRef.current, preview.name);
+    } catch (cause) {
+      setPdfError(cause instanceof Error ? cause.message : "Não foi possível salvar o PDF.");
+    }
+  }
 
   async function generate() {
     if (submitting.current) return;
@@ -39,6 +52,7 @@ export default function ResumePanel({
     setLoading(true);
     setError(null);
     setPreview(null);
+    setPdfError(null);
 
     try {
       setPreview(await generateResumePreview(applicationId));
@@ -71,7 +85,7 @@ export default function ResumePanel({
           <details open>
             <summary>Ver currículo para {preview.job_title}</summary>
 
-            <article className="resume-document">
+            <article className="resume-document" ref={documentRef}>
               <header>
                 <h2>{preview.name}</h2>
                 <p><strong>{preview.professional_title}</strong></p>
@@ -208,7 +222,16 @@ export default function ResumePanel({
             )}
           </div>
 
-          <button type="button" onClick={() => setPreview(null)}>
+          <div className="resume-export">
+            <button className="primary-button" type="button" onClick={savePdf}>
+              Salvar currículo em PDF 📄
+            </button>
+            <p>Na janela de impressão, escolha “Salvar como PDF”, papel A4 e desative cabeçalhos e rodapés. Confira as páginas antes de salvar.</p>
+            <p>O arquivo contém somente o currículo em português, sem os avisos da análise. Ele não é enviado à empresa automaticamente.</p>
+            {pdfError && <p role="alert">{pdfError}</p>}
+          </div>
+
+          <button type="button" onClick={() => { setPreview(null); setPdfError(null); }}>
             Fechar prévia
           </button>
         </div>

@@ -70,6 +70,27 @@ describe("Prévia do currículo", () => {
 
   afterEach(() => {
     cleanup();
+    vi.restoreAllMocks();
+  });
+
+  it("abre o PDF da prévia escolhida sem exportar os avisos da análise", async () => {
+    const user = userEvent.setup();
+    const doc = document.implementation.createHTMLDocument();
+    const print = vi.fn();
+    vi.spyOn(window, "open").mockReturnValue({
+      document: doc, focus: vi.fn(), print, close: vi.fn(),
+    } as unknown as Window);
+    render(<ResumePanel applicationId="application-test" />);
+    expect(screen.queryByRole("button", { name: /Salvar currículo em PDF/ })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Gerar prévia do currículo" }));
+    await screen.findByText("Pessoa de Teste");
+    await user.click(screen.getByRole("button", { name: /Salvar currículo em PDF/ }));
+    expect(print).toHaveBeenCalledOnce();
+    expect(doc.body.textContent).toContain("Pessoa de Teste");
+    expect(doc.body.textContent).toContain("Criar relatórios");
+    expect(doc.body.textContent).not.toContain("Kubernetes");
+    expect(doc.body.textContent).not.toContain("Revise o conteúdo antes de usar.");
+    expect(generateResumePreview).toHaveBeenCalledTimes(1);
   });
 
   it("gera a prévia da candidatura escolhida e mostra o conteúdo", async () => {
