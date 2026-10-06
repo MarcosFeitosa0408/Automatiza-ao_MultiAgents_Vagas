@@ -88,8 +88,8 @@ def test_invalid_credentials_validation_and_rate_limit(accounts):
     register(accounts)
     bad = accounts.post('/auth/login', json={'email': 'a@example.invalid', 'password': 'Outra senha longa 123!'})
     assert bad.status_code == 401
-    short = accounts.post('/auth/register', json={'email': 'x@example.invalid', 'name': 'X', 'password': 'short-secret'})
-    assert short.status_code == 422 and 'short-secret' not in short.text
+    short = accounts.post('/auth/register', json={'email': 'x@example.invalid', 'name': 'X', 'password': 'short7'})
+    assert short.status_code == 422 and 'short7' not in short.text
     assert accounts.get('/profile', headers={'Authorization': 'Bearer garbage'}).status_code == 401
     with get_store().connection() as db:
         db.executemany('INSERT INTO attempts VALUES (?, ?)', [('login:testclient', time.time())] * 20)

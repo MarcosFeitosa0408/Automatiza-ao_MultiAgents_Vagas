@@ -1,3 +1,4 @@
+import RobotStatus from "../../components/RobotStatus";
 import { useRef, useState } from "react";
 import { ApiError } from "../../api/client";
 import { generateInterviewPlan, evaluateInterviewAnswer } from "../../api/interview";
@@ -83,9 +84,10 @@ export default function InterviewPanel({
         {loading ? "Preparando..." : "Preparar entrevista"}
       </button>
 
-      {loading && <p role="status">Preparando seu roteiro...</p>}
+      {loading && <RobotStatus working message="Preparando seu roteiro…" />}
       {error && <p role="alert">{error}</p>}
 
+      {plan && !loading && !error && <RobotStatus message="Roteiro pronto. Vamos praticar!" />}
       {plan && (
         <details open>
           <summary>Treino para {plan.job_title}</summary>
@@ -152,8 +154,10 @@ export default function InterviewPanel({
                     onClick={() => evaluate(question.question_id)}>
                     {evaluating === question.question_id ? "Avaliando..." : "Avaliar resposta"}
                   </button>
+                  {evaluating === question.question_id && <RobotStatus working message="Analisando a estrutura da resposta…" />}
                   {evaluationErrors[question.question_id] && <p role="alert">{evaluationErrors[question.question_id]}</p>}
                   {feedback[question.question_id] && <div role="status">
+                    <RobotStatus message="Análise concluída!" />
                     <h4>Nota de estrutura: {feedback[question.question_id].score}/100</h4>
                     <p>{feedback[question.question_id].score >= 75
                       ? <><span aria-hidden="true">🎉👏</span> Muito bem! Sua resposta apresenta vários indícios de estrutura. Confira as orientações.</>

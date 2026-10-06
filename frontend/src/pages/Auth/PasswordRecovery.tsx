@@ -1,3 +1,4 @@
+import PasswordInput from "../../components/PasswordInput";
 import { useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { requestPasswordRecovery, resetAccountPassword } from "../../api/auth";
@@ -48,7 +49,7 @@ export default function PasswordRecovery({ token, onBack }: Props) {
     <section className="dashboard-panel auth-card">
       <p className="dashboard-eyebrow">MULTIAGENTS VAGAS</p>
       <h1>{resetting ? "Criar nova senha" : "Recuperar minha senha"}</h1>
-      <p>{resetting ? "Use uma senha de 15 a 128 caracteres. Seus dados serão preservados." : "Informe o e-mail que você usa para entrar na plataforma."}</p>
+      <p>{resetting ? "Use uma senha de 8 a 128 caracteres. Seus dados serão preservados." : "Informe o e-mail que você usa para entrar na plataforma."}</p>
       {error && <p className="dashboard-error" role="alert">{error}</p>}
       {notice && <p role="status">{notice}</p>}
       <form onSubmit={submit}>
@@ -56,9 +57,9 @@ export default function PasswordRecovery({ token, onBack }: Props) {
           <legend className="visually-hidden">Recuperação de senha</legend>
           {resetting ? <>
             <label htmlFor="recovery-password">Nova senha</label>
-            <input id="recovery-password" name="password" type="password" autoComplete="new-password" minLength={15} maxLength={128} required />
+            <PasswordInput fieldLabel="nova senha" id="recovery-password" name="password" autoComplete="new-password" minLength={8} maxLength={128} required />
             <label htmlFor="recovery-confirmation">Confirmar nova senha</label>
-            <input id="recovery-confirmation" name="confirmation" type="password" autoComplete="new-password" minLength={15} maxLength={128} required />
+            <PasswordInput fieldLabel="confirmação da nova senha" id="recovery-confirmation" name="confirmation" autoComplete="new-password" minLength={8} maxLength={128} required />
           </> : <>
             <label htmlFor="recovery-email">E-mail de acesso</label>
             <input id="recovery-email" name="email" type="email" autoComplete="email" maxLength={254} required />

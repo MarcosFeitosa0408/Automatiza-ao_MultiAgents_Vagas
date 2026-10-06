@@ -873,3 +873,27 @@
 .auth-card input { width: 100%; padding: 12px; box-sizing: border-box; font: inherit; }
 .auth-card .form-help { margin-top: 16px; }
 .account-bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: flex-end; padding: 12px 24px; border-bottom: 1px solid var(--border); }
+
+/* Entrada e assistentes visuais compactos */
+.auth-with-robots { grid-template-columns: minmax(0, 620px) minmax(0, 480px); justify-content: center; gap: 28px; align-items: center; }
+.auth-robots { width: 100%; margin: 0; min-width: 0; }
+.auth-robots img { display: block; width: 100%; height: auto; border-radius: 24px; border: 1px solid #285a7a; }
+.auth-robots figcaption { margin-top: 16px; font-size: clamp(20px, 2.4vw, 30px); font-weight: 700; }
+.auth-robots p { line-height: 1.6; color: #b8c9dc; }
+.password-control { display: flex; align-items: stretch; width: 100%; min-width: 0; gap: 5px; }
+.auth-card .password-control input { flex: 1; width: 0; min-width: 0; }
+.password-action { display: inline-flex; justify-content: center; align-items: center; min-width: 44px; min-height: 44px; padding: 6px; border: 1px solid #52768d; border-radius: 8px; background: #123349; color: #e5f5ff; cursor: pointer; font: inherit; }
+.password-action:hover { background: #20506b; }
+.password-action:focus-visible { outline: 3px solid #6be2ff; outline-offset: 2px; }
+.robot-status { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid #34546c; border-radius: 12px; width: fit-content; max-width: 100%; font-size: 14px; }
+.robot-mascot { display: inline-block; font-size: 26px; flex-shrink: 0; }
+.robot-working .robot-mascot { animation: robot-float 1.4s ease-in-out infinite; }
+@keyframes robot-float { 50% { transform: translateY(-3px) rotate(-5deg); } }
+@media (max-width: 760px) {
+  .auth-with-robots { grid-template-columns: minmax(0, 480px); gap: 16px; padding: 16px; }
+  .auth-robots img { max-height: 205px; object-fit: contain; background: #092236; border-radius: 16px; }
+  .auth-robots figcaption { margin-top: 10px; font-size: 20px; }
+  .auth-robots p { font-size: 14px; margin-bottom: 0; }
+  .auth-card { box-sizing: border-box; min-width: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .robot-working .robot-mascot { animation: none; } }

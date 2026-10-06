@@ -1,3 +1,4 @@
+import PasswordInput from "../../components/PasswordInput";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { loginAccount, registerAccount } from "../../api/auth";
@@ -61,7 +62,7 @@ export default function Login({ onAuthenticated, message }: Props) {
     } catch (cause) {
       if (cause instanceof ApiError) {
         const body = cause.detail as { detail?: unknown } | null;
-        setError(typeof body?.detail === "string" ? body.detail : "Confira os campos. Use uma senha com 15 a 128 caracteres.");
+        setError(typeof body?.detail === "string" ? body.detail : "Confira os campos. Use uma senha com 8 a 128 caracteres.");
       } else {
         setError("Não foi possível conectar ao servidor. Tente novamente.");
       }
@@ -80,7 +81,12 @@ export default function Login({ onAuthenticated, message }: Props) {
   }} />;
 
   return (
-    <main className="auth-page">
+    <main className="auth-page auth-with-robots">
+      <figure className="auth-robots">
+        <img src="/images/robots-globe.jpg" width="1408" height="768" alt="Pequenos robôs ao redor de um globo, ilustrando a preparação para oportunidades de trabalho." />
+        <figcaption>Seu próximo passo começa aqui <span aria-hidden="true">🌎🤖</span></figcaption>
+        <p>Encontre oportunidades, prepare seu currículo e pratique para entrevistas.</p>
+      </figure>
       <section className="dashboard-panel auth-card">
         <p className="dashboard-eyebrow">MULTIAGENTS VAGAS</p>
         <h1>{registering ? "Criar minha conta" : "Entrar na plataforma"}</h1>
@@ -98,11 +104,11 @@ export default function Login({ onAuthenticated, message }: Props) {
             <label htmlFor="account-email">E-mail de acesso</label>
             <input id="account-email" type="email" name="email" autoComplete="username" required maxLength={254} />
             <label htmlFor="account-password">Senha</label>
-            <input id="account-password" type="password" name="password" autoComplete={registering ? "new-password" : "current-password"} required minLength={15} maxLength={128} aria-describedby="password-help" />
-            <small id="password-help">Use de 15 a 128 caracteres. Uma frase longa ajuda a lembrar.</small>
+            <PasswordInput fieldLabel="senha" id="account-password" name="password" autoComplete={registering ? "new-password" : "current-password"} required minLength={8} maxLength={128} aria-describedby="password-help" />
+            <small id="password-help">Use de 8 a 128 caracteres. Uma frase longa ajuda a lembrar.</small>
             {registering && <>
               <label htmlFor="account-confirmation">Confirmar senha</label>
-              <input id="account-confirmation" type="password" name="confirmation" autoComplete="new-password" required minLength={15} maxLength={128} />
+              <PasswordInput fieldLabel="confirmação da senha" id="account-confirmation" name="confirmation" autoComplete="new-password" required minLength={8} maxLength={128} />
             </>}
             <button className="primary-button" type="submit">{busy ? "Aguarde..." : registering ? "Solicitar acesso" : "Entrar"}</button>
           </fieldset>

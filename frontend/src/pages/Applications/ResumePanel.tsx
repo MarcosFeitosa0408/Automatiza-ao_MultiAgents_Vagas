@@ -1,3 +1,4 @@
+import RobotStatus from "../../components/RobotStatus";
 import { useRef, useState } from "react";
 import { ApiError } from "../../api/client";
 import { generateResumePreview, translateResumePreview } from "../../api/resume";
@@ -105,12 +106,12 @@ export default function ResumePanel({
         {loading ? "Gerando..." : "Gerar prévia do currículo"}
       </button>
 
-      {loading && <p role="status">Organizando seu currículo...</p>}
+      {loading && <RobotStatus working message="Organizando seu currículo…" />}
       {error && <p role="alert">{error}</p>}
 
       {preview && (
         <div>
-          <p role="status">Prévia gerada. Confira o conteúdo abaixo.</p>
+          <RobotStatus message="Prévia gerada. Confira o conteúdo abaixo." />
 
           <div className="resume-translation">
             <label htmlFor={`resume-language-${applicationId}`}>Idioma do currículo</label>
@@ -130,7 +131,7 @@ export default function ResumePanel({
                 {translating ? "Traduzindo..." : "Traduzir currículo"}
               </button>
             </>}
-            {translating && <p role="status">Traduzindo seu currículo...</p>}
+            {translating && <RobotStatus working message="Traduzindo seu currículo…" />}
             {preview.language && <p role="status">Tradução pronta. Revise o currículo antes de salvar o PDF.</p>}
           </div>
 

@@ -1,3 +1,4 @@
+import RobotStatus from "../../components/RobotStatus";
 import { useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { ApiError } from "../../api/client";
@@ -118,15 +119,11 @@ export default function OpportunitySearch({
         elegibilidade nem envia uma candidatura.
       </p>
 
-      {loading && <p role="status">Consultando oportunidades...</p>}
+      {loading && <RobotStatus working message="Buscando vagas…" />}
       {error && <p role="alert">{error}</p>}
 
       {searched && (
-        <p role="status">
-          {jobs.length === 0
-            ? "Nenhuma oportunidade encontrada. Ajuste os filtros."
-            : `${jobs.length} oportunidades encontradas.`}
-        </p>
+        <RobotStatus mood={jobs.length === 0 ? "retry" : "ready"} message={jobs.length === 0 ? "Nenhuma oportunidade encontrada. Ajuste os filtros." : `${jobs.length} oportunidades encontradas.`} />
       )}
 
       <div className="opportunity-results">

@@ -10,7 +10,7 @@ bearer = HTTPBearer(auto_error=False)
 class LoginRequest(BaseModel):
     model_config = ConfigDict(extra='forbid')
     email: str = Field(min_length=3, max_length=254)
-    password: SecretStr = Field(min_length=15, max_length=128)
+    password: SecretStr = Field(min_length=8, max_length=128)
 
     @field_validator('email')
     @classmethod
@@ -80,7 +80,7 @@ class RecoveryRequest(BaseModel):
 class ResetPasswordRequest(BaseModel):
     model_config = ConfigDict(extra='forbid')
     token: SecretStr = Field(min_length=64, max_length=64)
-    password: SecretStr = Field(min_length=15, max_length=128)
+    password: SecretStr = Field(min_length=8, max_length=128)
 
 
 @router.post('/forgot-password', status_code=202)
