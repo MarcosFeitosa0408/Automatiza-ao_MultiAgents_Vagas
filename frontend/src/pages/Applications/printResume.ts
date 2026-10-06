@@ -1,5 +1,5 @@
 /** Imprime somente a prévia revisada, sem enviar dados a outro serviço. */
-export function printResume(article: HTMLElement, name: string): void {
+export function printResume(article: HTMLElement, name: string, language = "pt-BR"): void {
   const page = window.open("", "_blank", "width=900,height=750");
   if (!page) {
     throw new Error("O navegador bloqueou a janela do currículo. Permita pop-ups para esta plataforma e tente novamente.");
@@ -8,7 +8,7 @@ export function printResume(article: HTMLElement, name: string): void {
     page.opener = null;
     const doc = page.document;
     doc.title = `Currículo - ${name}`;
-    doc.documentElement.lang = "pt-BR";
+    doc.documentElement.lang = language;
     const style = doc.createElement("style");
     style.textContent = `
       @page { size: A4; margin: 16mm; }

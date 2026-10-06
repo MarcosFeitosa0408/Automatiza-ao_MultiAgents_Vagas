@@ -3,11 +3,12 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ResumePanel from "./ResumePanel";
 import { ApiError } from "../../api/client";
-import { generateResumePreview } from "../../api/resume";
+import { generateResumePreview, translateResumePreview } from "../../api/resume";
 import type { ResumePreview } from "../../api/resume";
 
 vi.mock("../../api/resume", () => ({
   generateResumePreview: vi.fn(),
+  translateResumePreview: vi.fn(),
 }));
 
 const preview: ResumePreview = {
@@ -71,6 +72,42 @@ describe("Prévia do currículo", () => {
   afterEach(() => {
     cleanup();
     vi.restoreAllMocks();
+  });
+
+  it("traduz somente ao clicar, exporta o idioma escolhido e restaura o original", async () => {
+    const user = userEvent.setup();
+    vi.mocked(translateResumePreview).mockResolvedValue({ ...preview, language: "en-US", professional_summary: "Data analysis" });
+    const doc = document.implementation.createHTMLDocument();
+    vi.spyOn(window, "open").mockReturnValue({ document: doc, focus: vi.fn(), print: vi.fn(), close: vi.fn() } as unknown as Window);
+    render(<ResumePanel applicationId="application-test" />);
+    await user.click(screen.getByRole("button", { name: "Gerar prévia do currículo" }));
+    await user.selectOptions(screen.getByLabelText("Idioma do currículo"), "en-US");
+    expect(translateResumePreview).not.toHaveBeenCalled();
+    expect((screen.getByRole("button", { name: /Salvar currículo em PDF/ }) as HTMLButtonElement).disabled).toBe(true);
+    await user.click(screen.getByRole("button", { name: "Traduzir currículo" }));
+    expect(await screen.findByText("Data analysis")).toBeTruthy();
+    expect(translateResumePreview).toHaveBeenCalledExactlyOnceWith("application-test", "en-US");
+    expect(screen.getByText("Professional summary")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: /Salvar currículo em PDF/ }));
+    expect(doc.documentElement.lang).toBe("en-US");
+    expect(doc.body.textContent).toContain("Data analysis");
+    await user.selectOptions(screen.getByLabelText("Idioma do currículo"), "pt-BR");
+    expect(screen.getByText("Análise de dados e relatórios.")).toBeTruthy();
+    expect(translateResumePreview).toHaveBeenCalledTimes(1);
+  });
+
+  it("preserva o original após falha de tradução e permite tentar novamente", async () => {
+    const user = userEvent.setup();
+    vi.mocked(translateResumePreview).mockRejectedValueOnce(new ApiError(503, {detail: "Cota indisponível"}));
+    render(<ResumePanel applicationId="application-test" />);
+    await user.click(screen.getByRole("button", { name: "Gerar prévia do currículo" }));
+    await user.selectOptions(screen.getByLabelText("Idioma do currículo"), "es");
+    await user.click(screen.getByRole("button", { name: "Traduzir currículo" }));
+    expect((await screen.findByRole("alert")).textContent).toContain("Cota indisponível");
+    expect(screen.getByText("Análise de dados e relatórios.")).toBeTruthy();
+    vi.mocked(translateResumePreview).mockResolvedValue({...preview, language: "es", professional_summary: "Análisis de datos"});
+    await user.click(screen.getByRole("button", { name: "Traduzir currículo" }));
+    expect(await screen.findByText("Análisis de datos")).toBeTruthy();
   });
 
   it("abre o PDF da prévia escolhida sem exportar os avisos da análise", async () => {

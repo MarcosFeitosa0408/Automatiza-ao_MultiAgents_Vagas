@@ -724,4 +724,20 @@ async def validation_error_handler(request: Request, exc: RequestValidationError
     ]})
 
 
+from core.resume_translation import TranslationRequest, TranslatedResume, translate_resume
+
+
+@app.post('/job-applications/{application_id}/resume-translation', response_model=TranslatedResume)
+def generate_resume_translation(
+    application_id: str,
+    payload: TranslationRequest,
+    user=Depends(require_user),
+    scoped: JobOrchestrator = Depends(get_user_orchestrator),
+):
+    # Reutiliza a análise da vaga e o perfil da conta autenticada.
+    preview = generate_resume_preview(application_id, scoped)
+    get_store().limit('resume-translation:' + user['id'], 5)
+    return translate_resume(preview, payload.language)
+
+
 configure_web_hosting(app)

@@ -1,8 +1,14 @@
 import { useRef, useState } from "react";
 import { ApiError } from "../../api/client";
-import { generateResumePreview } from "../../api/resume";
-import type { ResumePreview } from "../../api/resume";
+import { generateResumePreview, translateResumePreview } from "../../api/resume";
+import type { ResumePreview, ResumeLanguage } from "../../api/resume";
 import { printResume } from "./printResume";
+
+const headings = {
+  "pt-BR": {summary: "Resumo profissional", skills: "Competências", experience: "Experiência profissional", projects: "Projetos", education: "Formação", languages: "Idiomas", portuguese: "Português", english: "Inglês", current: "Atual"},
+  "en-US": {summary: "Professional summary", skills: "Skills", experience: "Professional experience", projects: "Projects", education: "Education", languages: "Languages", portuguese: "Portuguese", english: "English", current: "Present"},
+  es: {summary: "Resumen profesional", skills: "Competencias", experience: "Experiencia profesional", projects: "Proyectos", education: "Formación", languages: "Idiomas", portuguese: "Portugués", english: "Inglés", current: "Actualidad"},
+};
 
 type ResumePanelProps = {
   applicationId: string;
@@ -35,11 +41,32 @@ export default function ResumePanel({
   const documentRef = useRef<HTMLElement | null>(null);
   const [pdfError, setPdfError] = useState<string | null>(null);
 
+  const [original, setOriginal] = useState<ResumePreview | null>(null);
+  const [language, setLanguage] = useState<ResumeLanguage>("pt-BR");
+  const [translating, setTranslating] = useState(false);
+  const labels = headings[preview?.language ?? "pt-BR"];
+
+  async function translate() {
+    if (submitting.current || language === "pt-BR") return;
+    submitting.current = true;
+    setTranslating(true);
+    setError(null);
+    setPdfError(null);
+    try {
+      setPreview(await translateResumePreview(applicationId, language));
+    } catch (cause) {
+      setError(getErrorMessage(cause));
+    } finally {
+      submitting.current = false;
+      setTranslating(false);
+    }
+  }
+
   function savePdf() {
     if (!preview || !documentRef.current) return;
     setPdfError(null);
     try {
-      printResume(documentRef.current, preview.name);
+      printResume(documentRef.current, preview.name, preview.language ?? "pt-BR");
     } catch (cause) {
       setPdfError(cause instanceof Error ? cause.message : "Não foi possível salvar o PDF.");
     }
@@ -55,7 +82,10 @@ export default function ResumePanel({
     setPdfError(null);
 
     try {
-      setPreview(await generateResumePreview(applicationId));
+      const generated = await generateResumePreview(applicationId);
+      setPreview(generated);
+      setOriginal(generated);
+      setLanguage("pt-BR");
     } catch (cause) {
       setError(getErrorMessage(cause));
     } finally {
@@ -70,7 +100,7 @@ export default function ResumePanel({
         className="secondary-button"
         type="button"
         onClick={generate}
-        disabled={loading}
+        disabled={loading || translating}
       >
         {loading ? "Gerando..." : "Gerar prévia do currículo"}
       </button>
@@ -81,6 +111,28 @@ export default function ResumePanel({
       {preview && (
         <div>
           <p role="status">Prévia gerada. Confira o conteúdo abaixo.</p>
+
+          <div className="resume-translation">
+            <label htmlFor={`resume-language-${applicationId}`}>Idioma do currículo</label>
+            <select id={`resume-language-${applicationId}`} value={language} disabled={translating} onChange={(event) => {
+              const selected = event.target.value as ResumeLanguage;
+              setLanguage(selected);
+              setError(null);
+              if (selected === "pt-BR" && original) setPreview(original);
+            }}>
+              <option value="pt-BR">Português do Brasil</option>
+              <option value="en-US">Inglês</option>
+              <option value="es">Espanhol</option>
+            </select>
+            {language !== "pt-BR" && <>
+              <p>Ao clicar em Traduzir currículo, os textos profissionais serão enviados ao DeepL. Os campos de nome, contato, links, empresas e datas ficam fora do envio; confira se há informações pessoais nas descrições. A tradução não altera seu perfil nem a vaga.</p>
+              <button type="button" className="secondary-button" disabled={translating || language === preview.language} onClick={translate}>
+                {translating ? "Traduzindo..." : "Traduzir currículo"}
+              </button>
+            </>}
+            {translating && <p role="status">Traduzindo seu currículo...</p>}
+            {preview.language && <p role="status">Tradução pronta. Revise o currículo antes de salvar o PDF.</p>}
+          </div>
 
           <details open>
             <summary>Ver currículo para {preview.job_title}</summary>
@@ -106,20 +158,20 @@ export default function ResumePanel({
               </header>
 
               <section>
-                <h3>Resumo profissional</h3>
+                <h3>{labels.summary}</h3>
                 <p>{preview.professional_summary}</p>
               </section>
 
               {preview.skills.length > 0 && (
                 <section>
-                  <h3>Competências</h3>
+                  <h3>{labels.skills}</h3>
                   <p>{preview.skills.join(" · ")}</p>
                 </section>
               )}
 
               {preview.experience.length > 0 && (
                 <section>
-                  <h3>Experiência profissional</h3>
+                  <h3>{labels.experience}</h3>
 
                   {preview.experience.map((experience, index) => (
                     <div key={index}>
@@ -130,7 +182,7 @@ export default function ResumePanel({
                       <p>
                         {experience.start}
                         {experience.current
-                          ? " — Atual"
+                          ? ` — ${labels.current}`
                           : experience.end
                             ? ` — ${experience.end}`
                             : ""}
@@ -154,7 +206,7 @@ export default function ResumePanel({
 
               {preview.projects.length > 0 && (
                 <section>
-                  <h3>Projetos</h3>
+                  <h3>{labels.projects}</h3>
 
                   {preview.projects.map((project, index) => (
                     <div key={index}>
@@ -168,7 +220,7 @@ export default function ResumePanel({
 
               {preview.education.length > 0 && (
                 <section>
-                  <h3>Formação</h3>
+                  <h3>{labels.education}</h3>
 
                   {preview.education.map((education, index) => (
                     <div key={index}>
@@ -187,12 +239,12 @@ export default function ResumePanel({
               )}
 
               <section>
-                <h3>Idiomas</h3>
+                <h3>{labels.languages}</h3>
                 {preview.languages.portuguese && (
-                  <p>Português: {preview.languages.portuguese}</p>
+                  <p>{labels.portuguese}: {preview.languages.portuguese}</p>
                 )}
                 {preview.languages.english && (
-                  <p>Inglês: {preview.languages.english}</p>
+                  <p>{labels.english}: {preview.languages.english}</p>
                 )}
               </section>
             </article>
@@ -223,15 +275,15 @@ export default function ResumePanel({
           </div>
 
           <div className="resume-export">
-            <button className="primary-button" type="button" onClick={savePdf}>
+            <button className="primary-button" type="button" onClick={savePdf} disabled={translating || language !== (preview.language ?? "pt-BR")}>
               Salvar currículo em PDF 📄
             </button>
             <p>Na janela de impressão, escolha “Salvar como PDF”, papel A4 e desative cabeçalhos e rodapés. Confira as páginas antes de salvar.</p>
-            <p>O arquivo contém somente o currículo em português, sem os avisos da análise. Ele não é enviado à empresa automaticamente.</p>
+            <p>O arquivo contém somente o currículo no idioma da prévia, sem os avisos da análise. Ele não é enviado à empresa automaticamente.</p>
             {pdfError && <p role="alert">{pdfError}</p>}
           </div>
 
-          <button type="button" onClick={() => { setPreview(null); setPdfError(null); }}>
+          <button type="button" disabled={translating} onClick={() => { setPreview(null); setOriginal(null); setPdfError(null); }}>
             Fechar prévia
           </button>
         </div>

@@ -1,6 +1,9 @@
 import { apiRequest } from "./client";
 
+export type ResumeLanguage = "pt-BR" | "en-US" | "es";
+
 export interface ResumePreview {
+  language?: ResumeLanguage;
   application_id: string;
   job_title: string;
   company: string;
@@ -59,4 +62,9 @@ export function generateResumePreview(
     `/job-applications/${encodeURIComponent(applicationId)}/resume-preview`,
     { method: "POST" },
   );
+}
+export function translateResumePreview(applicationId: string, language: "en-US" | "es"): Promise<ResumePreview> {
+  return apiRequest(`/job-applications/${encodeURIComponent(applicationId)}/resume-translation`, {
+    method: "POST", body: JSON.stringify({ language }),
+  });
 }
