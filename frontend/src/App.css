@@ -941,3 +941,13 @@
   .auth-page .auth-card { padding: 24px 20px; border-radius: 18px; }
   .auth-page .auth-card h1 { font-size: 26px; }
 }
+
+/* Ajuda opcional: sem sobrepor o conteúdo em telas pequenas. */
+.help-robot, .help-admin { margin: 1rem 0; }
+.help-robot textarea, .help-admin textarea { display: block; width: 100%; min-height: 6rem; box-sizing: border-box; margin: .5rem 0; padding: .7rem; font: inherit; }
+.help-robot button, .help-admin button { margin: .35rem .5rem .35rem 0; }
+.help-robot label, .help-admin label { display: block; margin-top: .6rem; }
+.help-robot p, .help-question p { overflow-wrap: anywhere; white-space: pre-wrap; }
+.help-question { border-top: 1px solid #a3b8ca; padding: 1rem 0; }
+.help-admin input, .help-admin select { max-width: 100%; padding: .5rem; font: inherit; }
+@media (max-width: 600px) { .help-robot button, .help-admin button { max-width: 100%; white-space: normal; } }

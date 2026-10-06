@@ -73,6 +73,15 @@ class AccountStore:
                 CREATE TABLE IF NOT EXISTS password_resets (
                     token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
                     expires_at DOUBLE PRECISION NOT NULL);
+                CREATE TABLE IF NOT EXISTS help_questions (
+                    id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    week TEXT NOT NULL, question TEXT NOT NULL, normalized TEXT NOT NULL,
+                    state TEXT NOT NULL, answer TEXT NOT NULL,
+                    created_at DOUBLE PRECISION NOT NULL, updated_at DOUBLE PRECISION NOT NULL);
+                CREATE TABLE IF NOT EXISTS help_usage (
+                    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    week TEXT NOT NULL, used INTEGER NOT NULL, PRIMARY KEY(user_id,week));
+                CREATE INDEX IF NOT EXISTS help_questions_week ON help_questions(week,created_at);
                 CREATE TABLE IF NOT EXISTS admin_audit (
                     id TEXT PRIMARY KEY, actor_id TEXT NOT NULL,
                     target_id TEXT NOT NULL, action TEXT NOT NULL,
@@ -285,6 +294,9 @@ class PostgresAccountStore(AccountStore):
                 'CREATE INDEX IF NOT EXISTS attempts_bucket ON attempts(bucket, occurred_at)',
                 "CREATE TABLE IF NOT EXISTS account_access (user_id TEXT PRIMARY KEY REFERENCES users(id), state TEXT NOT NULL CHECK(state IN ('pending', 'active', 'blocked')), role TEXT NOT NULL CHECK(role IN ('user', 'admin')))",
                 'CREATE TABLE IF NOT EXISTS password_resets (token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, expires_at DOUBLE PRECISION NOT NULL)',
+                'CREATE TABLE IF NOT EXISTS help_questions (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, week TEXT NOT NULL, question TEXT NOT NULL, normalized TEXT NOT NULL, state TEXT NOT NULL, answer TEXT NOT NULL, created_at DOUBLE PRECISION NOT NULL, updated_at DOUBLE PRECISION NOT NULL)',
+                'CREATE TABLE IF NOT EXISTS help_usage (user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, week TEXT NOT NULL, used INTEGER NOT NULL, PRIMARY KEY(user_id,week))',
+                'CREATE INDEX IF NOT EXISTS help_questions_week ON help_questions(week,created_at)',
                 'CREATE TABLE IF NOT EXISTS admin_audit (id TEXT PRIMARY KEY, actor_id TEXT NOT NULL, target_id TEXT NOT NULL, action TEXT NOT NULL, occurred_at DOUBLE PRECISION NOT NULL)',
             ):
                 db.execute(statement)

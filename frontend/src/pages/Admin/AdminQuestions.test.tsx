@@ -1,0 +1,27 @@
+import { afterEach, expect, it, vi } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import AdminQuestions from "./AdminQuestions";
+import { deleteHelp, helpHistory, reviewHelp } from "../../api/help";
+vi.mock("../../api/help", () => ({ deleteHelp: vi.fn(), exportHelp: vi.fn(), helpHistory: vi.fn(), reviewHelp: vi.fn() }));
+afterEach(() => { cleanup(); vi.resetAllMocks(); });
+it("mantém revisão explícita e só exclui após confirmar", async () => {
+  vi.mocked(helpHistory).mockResolvedValue({ week: "2026-10-05", total: 1, items: [{ id: "q1", question: "Posso mudar a cor?", normalized: "posso mudar a cor", state: "pending", answer: "", created_at: 1 }] });
+  const user = userEvent.setup(); render(<AdminQuestions />);
+  expect(helpHistory).not.toHaveBeenCalled();
+  await user.click(screen.getByRole("button", { name: /Dúvidas para melhoria/ }));
+  await screen.findByText("Posso mudar a cor?");
+  await user.selectOptions(screen.getByLabelText("Estado"), "answered");
+  expect((screen.getByRole("button", { name: "Salvar revisão" }) as HTMLButtonElement).disabled).toBe(true);
+  await user.type(screen.getByLabelText("Resposta revisada"), "Resposta conferida.");
+  vi.mocked(reviewHelp).mockResolvedValue({ saved: true });
+  await user.click(screen.getByRole("button", { name: "Salvar revisão" }));
+  expect(reviewHelp).toHaveBeenCalledWith("q1", "answered", "Resposta conferida.");
+  await user.click(screen.getByRole("button", { name: "Excluir dúvida" }));
+  await user.click(screen.getByRole("button", { name: "Cancelar" }));
+  expect(deleteHelp).not.toHaveBeenCalled();
+  await user.click(screen.getByRole("button", { name: "Excluir dúvida" }));
+  vi.mocked(deleteHelp).mockResolvedValue({ deleted: true });
+  await user.click(screen.getByRole("button", { name: "Confirmar exclusão" }));
+  expect(deleteHelp).toHaveBeenCalledWith("q1");
+});

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 import Platform from "./Platform";
+import HelpRobot from "./components/HelpRobot";
 import PlatformGuide from "./components/PlatformGuide";
 import AdminAccounts from "./pages/Admin/AdminAccounts";
 import Login from "./pages/Auth/Login";
@@ -64,7 +65,8 @@ export default function App() {
       <button type="button" className="secondary-button" onClick={logout} disabled={loggingOut}>{loggingOut ? "Saindo..." : "Sair da conta"}</button>
       {error && <p role="alert">{error}</p>}
     </div>
-        <PlatformGuide key={`guide-${user.id}`} />
+    <HelpRobot key={`help-${user.id}`} />
+    <PlatformGuide key={`guide-${user.id}`} />
     {user.role === "admin" && adminOpen ? <AdminAccounts /> : <Platform key={user.id} />}
   </>;
 }

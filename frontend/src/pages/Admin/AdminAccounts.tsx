@@ -1,3 +1,4 @@
+import AdminQuestions from "./AdminQuestions";
 import { useEffect, useRef, useState } from "react";
 import { changeAccess, deleteAccount, listAccounts } from "../../api/admin";
 import type { AccessAction, ManagedAccount } from "../../api/admin";
@@ -98,5 +99,6 @@ export default function AdminAccounts() {
         </div>}
       </article>)}
     </section>
+    <AdminQuestions />
   </main>;
 }

@@ -1,0 +1,11 @@
+import { apiRequest } from "./client";
+export type HelpQuota = { remaining: number | null; renews_at: string; week: string };
+export type HelpReply = HelpQuota & { known: boolean; answer: string };
+export type HelpItem = { id: string; question: string; normalized: string; state: "pending" | "reviewing" | "answered"; answer: string; created_at: number };
+export const helpInfo = () => apiRequest<HelpQuota & {suggestions: string[]}>("/help");
+export const askHelp = (question: string) => apiRequest<HelpReply>("/help/ask",{method:"POST",body:JSON.stringify({question})});
+export const forwardHelp = (question: string, requestId: string) => apiRequest<HelpQuota & {sent:boolean;duplicate:boolean}>("/help/forward",{method:"POST",body:JSON.stringify({question,request_id:requestId})});
+export const helpHistory = (week?: string, offset=0) => apiRequest<{items: HelpItem[]; total:number; week:string}>(`/admin/help/questions?offset=${offset}${week ? `&week=${encodeURIComponent(week)}` : ""}`);
+export const reviewHelp = (id: string, state:HelpItem["state"], answer:string) => apiRequest(`/admin/help/questions/${encodeURIComponent(id)}`,{method:"PATCH",body:JSON.stringify({state,answer})});
+export const deleteHelp = (id:string) => apiRequest(`/admin/help/questions/${encodeURIComponent(id)}`,{method:"DELETE"});
+export const exportHelp = (week:string) => apiRequest<unknown>(`/admin/help/export?week=${encodeURIComponent(week)}`);
