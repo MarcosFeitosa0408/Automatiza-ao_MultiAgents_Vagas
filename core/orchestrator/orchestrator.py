@@ -491,17 +491,23 @@ class JobOrchestrator:
         self,
         applications: list[JobApplicationObject],
     ) -> dict:
-        """Calcula métricas usando o tracking dos objetos centrais."""
-
+        """Conta todas as vagas salvas; etapas exigem acompanhamento real."""
         trackings = [
             application.tracking
             for application in applications
             if application.tracking is not None
         ]
-
-        return self.optimization_agent.calculate_metrics(
-            trackings
-        )
+        metrics = self.optimization_agent.calculate_metrics(trackings)
+        total = len(applications)
+        metrics["total_applications"] = total
+        for rate, count in (
+            ("response_rate", "screening_or_beyond"),
+            ("interview_rate", "interviews"),
+            ("offer_rate", "offers"),
+            ("hire_rate", "hires"),
+        ):
+            metrics[rate] = round(metrics[count] / total * 100, 2) if total else 0.0
+        return metrics
 
 
     def save_job_application(
