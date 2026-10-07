@@ -59,6 +59,8 @@ app.include_router(auth_router)
 app.include_router(admin_router)
 from core.help_api import router as help_router
 app.include_router(help_router)
+from core.progress_api import router as progress_router
+app.include_router(progress_router)
 app.include_router(opportunity_search_router, dependencies=[Depends(require_user)])
 
 def initialize_configured_database() -> None:

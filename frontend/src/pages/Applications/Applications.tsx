@@ -1,3 +1,4 @@
+import ProgressPanel from "./ProgressPanel";
 import DeleteApplication from "./DeleteApplication";
 import JobDetailsEditor from "../ApplicationDetails/JobDetailsEditor";
 import InterviewPanel from "./InterviewPanel";
@@ -242,6 +243,17 @@ export default function Applications({ initialApplicationId }: { initialApplicat
     );
   }}
 />
+
+<ProgressPanel application={application} onSaved={(updated) => {
+  setApplications((current) => current.map((item) => item.application_id === updated.application_id ? updated : item));
+  setNotice(updated.tracking?.current_status === "HIRED"
+    ? "Contratação registrada! 🎉 Parabéns por essa conquista!"
+    : updated.tracking?.current_status === "INTERVIEW"
+      ? "Entrevista registrada! 🤖 Boa preparação para esse próximo passo!"
+      : updated.tracking?.current_status === "REJECTED"
+        ? "Resultado registrado. Vamos continuar buscando novas oportunidades. 💙"
+        : "Etapa registrada. O dashboard usará este histórico ao ser aberto.");
+}} />
 
 <ResumePanel
   key={`resume-${application.application_id}-${application.updated_at}`}

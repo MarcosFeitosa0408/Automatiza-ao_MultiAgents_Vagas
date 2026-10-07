@@ -501,12 +501,18 @@ class JobOrchestrator:
         total = len(applications)
         metrics["total_applications"] = total
         for rate, count in (
-            ("response_rate", "screening_or_beyond"),
             ("interview_rate", "interviews"),
             ("offer_rate", "offers"),
             ("hire_rate", "hires"),
         ):
             metrics[rate] = round(metrics[count] / total * 100, 2) if total else 0.0
+        response_statuses = {JobStatus.SCREENING, JobStatus.INTERVIEW, JobStatus.FINAL,
+                             JobStatus.OFFER, JobStatus.HIRED, JobStatus.REJECTED}
+        responses = sum(
+            bool(({event.status for event in tracking.history} | {tracking.current_status}) & response_statuses)
+            for tracking in trackings
+        )
+        metrics["response_rate"] = round(responses / total * 100, 2) if total else 0.0
         return metrics
 
 

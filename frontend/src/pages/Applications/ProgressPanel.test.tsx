@@ -1,0 +1,33 @@
+import { afterEach, expect, it, vi } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import ProgressPanel from "./ProgressPanel";
+import { recordProgress } from "../../api/progress";
+import type { JobApplicationObject } from "../../types/api";
+vi.mock("../../api/progress",()=>({recordProgress:vi.fn()}));
+afterEach(()=>{cleanup();vi.resetAllMocks();});
+const application:JobApplicationObject={application_id:"one",job:{job_id:"job",title:"Analista",company:"Empresa",source:"Teste",url:null,location:"SP",work_model:"UNKNOWN",employment_type:"CLT",description:"",requirements:[],desirable_requirements:[],discovered_at:"2026-10-07T12:00:00Z",status:"DISCOVERED"},qualification:null,personalization:null,preparation:null,tracking:null,created_at:"2026-10-07T12:00:00Z",updated_at:"2026-10-07T12:00:00Z"};
+it("registra somente depois de confirmar; cancelar não faz envio",async()=>{
+  const user=userEvent.setup();const saved=vi.fn();render(<ProgressPanel application={application} onSaved={saved}/>);
+  await user.click(screen.getByText("Acompanhar candidatura"));
+  await user.selectOptions(screen.getByLabelText("Etapa que aconteceu"),"INTERVIEW");
+  await user.type(screen.getByLabelText(/Observação opcional/),"Convite recebido.");
+  await user.click(screen.getByRole("button",{name:"Registrar etapa"}));
+  expect(recordProgress).not.toHaveBeenCalled();
+  await user.click(screen.getByRole("button",{name:"Cancelar registro"}));
+  expect(recordProgress).not.toHaveBeenCalled();
+  vi.mocked(recordProgress).mockResolvedValue({...application,tracking:{job_id:"job",current_status:"INTERVIEW",history:[{status:"INTERVIEW",note:"Convite recebido.",occurred_at:"2026-10-07T12:00:00Z"}],followup_count:0,last_followup_at:null}});
+  await user.click(screen.getByRole("button",{name:"Registrar etapa"}));
+  await user.click(screen.getByRole("button",{name:"Confirmar registro"}));
+  expect(recordProgress).toHaveBeenCalledWith("one","INTERVIEW",null,"Convite recebido.");
+  expect(saved).toHaveBeenCalled();
+});
+it("preserva observação e confirmação quando a API falha",async()=>{
+  const user=userEvent.setup();render(<ProgressPanel application={application} onSaved={vi.fn()}/>);
+  await user.click(screen.getByText("Acompanhar candidatura"));
+  await user.type(screen.getByLabelText(/Observação opcional/),"Portal confirmou.");
+  vi.mocked(recordProgress).mockRejectedValue(new Error("offline"));
+  await user.click(screen.getByRole("button",{name:"Registrar etapa"}));await user.click(screen.getByRole("button",{name:"Confirmar registro"}));
+  expect(await screen.findByRole("alert")).toBeTruthy();
+  expect((screen.getByLabelText(/Observação opcional/) as HTMLTextAreaElement).value).toBe("Portal confirmou.");
+});

@@ -43,9 +43,6 @@ class OptimizationAgent:
             applications,
             {
                 JobStatus.INTERVIEW,
-                JobStatus.FINAL,
-                JobStatus.OFFER,
-                JobStatus.HIRED,
             },
         )
 
@@ -53,8 +50,6 @@ class OptimizationAgent:
             applications,
             {
                 JobStatus.FINAL,
-                JobStatus.OFFER,
-                JobStatus.HIRED,
             },
         )
 
@@ -62,7 +57,6 @@ class OptimizationAgent:
             applications,
             {
                 JobStatus.OFFER,
-                JobStatus.HIRED,
             },
         )
 
