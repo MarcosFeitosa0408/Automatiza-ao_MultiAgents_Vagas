@@ -749,4 +749,7 @@ def generate_resume_translation(
     return translate_resume(preview, payload.language)
 
 
+from core.job_correction_api import router as job_correction_router
+app.include_router(job_correction_router)
+
 configure_web_hosting(app)

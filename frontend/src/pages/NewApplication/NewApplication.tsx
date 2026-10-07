@@ -9,6 +9,8 @@ import type {
   WorkModel,
 } from "../../types/api";
 
+import { hasLongRequirements } from "../ApplicationDetails/repairText";
+
 type NewApplicationProps = {
   onViewApplications: (applicationId?: string) => void;
   initialJob?: JobOpportunity;
@@ -83,6 +85,11 @@ export default function NewApplication({
         setError("Informe um link válido começando com http:// ou https://.");
         return;
       }
+    }
+
+    if (hasLongRequirements(splitLines(read("requirements"))) || hasLongRequirements(splitLines(read("desirable_requirements")))) {
+      setError("Separe os requisitos em itens curtos. Cole o anúncio completo em Descrição da vaga.");
+      return;
     }
 
     if (!ids.current) {
@@ -194,7 +201,7 @@ export default function NewApplication({
         {duplicate && <div role="status" className="application-success">
           <h3>Esta vaga já está nas suas candidaturas.</h3>
           <p>{duplicate.title} · {duplicate.company}</p>
-          <p>A vaga existente foi preservada. Abra-a para editar a descrição e os requisitos. Os campos digitados aqui não foram salvos.</p>
+          <p>A vaga existente foi preservada. Abra-a para editar a descrição e os requisitos. Os campos digitados aqui nãoforam salvos.</p>
           <button type="button" className="secondary-button" onClick={() => onViewApplications(duplicate.applicationId)}>Abrir vaga existente</button>
         </div>}
 
@@ -299,7 +306,7 @@ export default function NewApplication({
                 aria-describedby="requirements-help"
               />
               <small id="requirements-help">
-                Escreva um requisito por linha, conforme o anúncio.
+                Informe competências por nome, uma por linha, quando exigidas no anúncio (por exemplo, SQL e Power BI em linhas diferentes). Cole o anúncio completo na descrição.
               </small>
             </div>
 
