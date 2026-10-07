@@ -211,11 +211,16 @@ def create_job_application(
         application_id=request.application_id,
     )
 
-    saved_application = orchestrator.save_job_application(
-        application
-    )
+    repository = orchestrator.job_application_repository
+    if hasattr(repository, "create_unique"):
+        return repository.create_unique(application)
 
-    return saved_application
+    # Compatibilidade com repositórios locais antigos usados nos testes.
+    from core.job_identity import same_opportunity, duplicate_error
+    for existing in repository.list_all():
+        if existing.application_id == application.application_id or same_opportunity(existing.job, application.job):
+            raise duplicate_error(existing)
+    return orchestrator.save_job_application(application)
 
 
 @app.get("/job-applications")

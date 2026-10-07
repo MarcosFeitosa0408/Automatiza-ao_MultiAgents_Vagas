@@ -57,6 +57,7 @@ const pageInfo: Record<
 
 function Platform() {
   const [page, setPage] = useState<NavigationPage>(readPage);
+  const [selectedApplicationId, setSelectedApplicationId] = useState<string | undefined>();
   const [selectedJob, setSelectedJob] = useState<JobOpportunity | null>(null);
 
   useEffect(() => {
@@ -72,6 +73,7 @@ function Platform() {
   }, []);
 
   function navigate(nextPage: NavigationPage) {
+    setSelectedApplicationId(undefined);
     if (nextPage === "new-application") {
       setSelectedJob(null);
     }
@@ -97,13 +99,13 @@ function Platform() {
         <Dashboard onNewApplication={() => navigate("new-application")} />
       )}
 
-      {page === "applications" && <Applications />}
+      {page === "applications" && <Applications initialApplicationId={selectedApplicationId} />}
 
       {page === "new-application" && (
         <NewApplication
           key={selectedJob?.job_id ?? "manual"}
           initialJob={selectedJob ?? undefined}
-          onViewApplications={() => navigate("applications")}
+          onViewApplications={(id) => { navigate("applications"); setSelectedApplicationId(id); }}
         />
       )}
 

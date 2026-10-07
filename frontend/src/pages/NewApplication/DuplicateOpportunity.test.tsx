@@ -1,0 +1,23 @@
+import { afterEach, expect, it, vi } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import NewApplication from "./NewApplication";
+import { createJobApplication } from "../../api/applications";
+import { ApiError } from "../../api/client";
+vi.mock("../../api/applications", () => ({ createJobApplication: vi.fn() }));
+afterEach(() => { cleanup(); vi.resetAllMocks(); });
+it("preserva o formulário e abre a vaga existente somente ao clicar", async () => {
+  const navigate=vi.fn(); const user=userEvent.setup();
+  vi.mocked(createJobApplication).mockRejectedValue(new ApiError(409,{detail:{code:"opportunity_already_saved",application_id:"owned-id",title:"Analista",company:"Empresa"}}));
+  render(<NewApplication onViewApplications={navigate} />);
+  await user.type(screen.getByLabelText("Cargo *"),"Analista");
+  await user.type(screen.getByLabelText("Empresa *"),"Empresa");
+  await user.type(screen.getByLabelText("Origem da vaga *"),"Adzuna");
+  await user.type(screen.getByLabelText("Requisitos obrigatórios"),"SQL e Python");
+  await user.click(screen.getByRole("button",{name:"Cadastrar oportunidade"}));
+  expect(await screen.findByText("Esta vaga já está nas suas candidaturas.")).toBeTruthy();
+  expect((screen.getByLabelText("Requisitos obrigatórios") as HTMLTextAreaElement).value).toBe("SQL e Python");
+  expect(navigate).not.toHaveBeenCalled();
+  await user.click(screen.getByRole("button",{name:"Abrir vaga existente"}));
+  expect(navigate).toHaveBeenCalledWith("owned-id");
+});

@@ -10,7 +10,7 @@ import type {
 } from "../../types/api";
 
 type NewApplicationProps = {
-  onViewApplications: () => void;
+  onViewApplications: (applicationId?: string) => void;
   initialJob?: JobOpportunity;
 };
 
@@ -37,6 +37,7 @@ export default function NewApplication({
   onViewApplications,
   initialJob,
 }: NewApplicationProps) {
+  const [duplicate, setDuplicate] = useState<{ applicationId: string; title: string; company: string } | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<JobApplicationObject | null>(null);
@@ -64,6 +65,7 @@ export default function NewApplication({
     const url = read("url");
 
     setError(null);
+    setDuplicate(null);
 
     if (!title || !company || !source) {
       setError("Preencha cargo, empresa e origem da vaga.");
@@ -116,7 +118,13 @@ export default function NewApplication({
       const result = await createJobApplication(request);
       setSaved(result);
     } catch (err) {
-      setError(errorMessage(err));
+      const detail = err instanceof ApiError ? (err.detail as { detail?: unknown })?.detail : null;
+      if (err instanceof ApiError && err.status === 409 && detail && typeof detail === "object") {
+        const data = detail as Record<string, unknown>;
+        if (data.code === "opportunity_already_saved" && typeof data.application_id === "string" && typeof data.title === "string" && typeof data.company === "string") {
+          setDuplicate({ applicationId: data.application_id, title: data.title, company: data.company });
+        } else setError(errorMessage(err));
+      } else setError(errorMessage(err));
     } finally {
       submitting.current = false;
       setSaving(false);
@@ -141,7 +149,7 @@ export default function NewApplication({
           <button
             className="primary-button"
             type="button"
-            onClick={onViewApplications}
+            onClick={() => onViewApplications()}
           >
             Ver candidaturas
           </button>
@@ -182,6 +190,13 @@ export default function NewApplication({
             {error}
           </div>
         )}
+
+        {duplicate && <div role="status" className="application-success">
+          <h3>Esta vaga já está nas suas candidaturas.</h3>
+          <p>{duplicate.title} · {duplicate.company}</p>
+          <p>A vaga existente foi preservada. Abra-a para editar a descrição e os requisitos. Os campos digitados aqui não foram salvos.</p>
+          <button type="button" className="secondary-button" onClick={() => onViewApplications(duplicate.applicationId)}>Abrir vaga existente</button>
+        </div>}
 
         <fieldset disabled={saving}>
           <legend className="visually-hidden">Informações da vaga</legend>

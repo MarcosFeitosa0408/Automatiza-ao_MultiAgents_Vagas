@@ -351,6 +351,20 @@ class AccountJobRepository:
     def __init__(self, store: AccountStore, user_id: str):
         self.store, self.user_id = store, user_id
 
+    def create_unique(self, application: JobApplicationObject):
+        from core.job_identity import same_opportunity, duplicate_error
+        with self.store.connection() as db:
+            # SQLite serializa a criação; o adaptador Postgres usa lock transacional.
+            db.execute('BEGIN IMMEDIATE')
+            rows = db.execute('SELECT payload FROM private_applications WHERE user_id=? ORDER BY application_id', (self.user_id,)).fetchall()
+            for row in rows:
+                existing = JobApplicationObject.model_validate_json(row['payload'])
+                if existing.application_id == application.application_id or same_opportunity(existing.job, application.job):
+                    raise duplicate_error(existing)
+            db.execute('INSERT INTO private_applications VALUES (?, ?, ?)',
+                       (self.user_id, application.application_id, application.model_dump_json()))
+        return application
+
     def save(self, application: JobApplicationObject):
         with self.store.connection() as db:
             db.execute('''INSERT INTO private_applications VALUES (?, ?, ?)

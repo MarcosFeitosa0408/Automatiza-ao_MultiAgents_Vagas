@@ -36,7 +36,8 @@ function formatDate(value: string) {
     : date.toLocaleDateString("pt-BR");
 }
 
-export default function Applications() {
+export default function Applications({ initialApplicationId }: { initialApplicationId?: string } = {}) {
+  const [selectedId, setSelectedId] = useState(initialApplicationId);
   const [applications, setApplications] =
     useState<JobApplicationObject[]>([]);
   const [loading, setLoading] = useState(true);
@@ -85,6 +86,7 @@ export default function Applications() {
   const query = search.trim().toLocaleLowerCase("pt-BR");
 
   const filteredApplications = applications.filter((application) => {
+    if (selectedId && application.application_id !== selectedId) return false;
     const text = [
       application.job.title,
       application.job.company,
@@ -98,6 +100,7 @@ export default function Applications() {
 
   return (
     <section className="dashboard" aria-labelledby="applications-title">
+      {selectedId && <div role="status"><p>Exibindo a vaga já cadastrada. Abra Editar descrição e requisitos para completá-la.</p><button type="button" className="secondary-button" onClick={() => setSelectedId(undefined)}>Ver todas as candidaturas</button></div>}
       <div className="dashboard-intro">
         <div>
           <p className="dashboard-eyebrow">OPORTUNIDADES</p>
