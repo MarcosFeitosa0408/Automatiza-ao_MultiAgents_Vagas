@@ -88,6 +88,7 @@ describe("Prévia do currículo", () => {
     expect(await screen.findByText("Data analysis")).toBeTruthy();
     expect(translateResumePreview).toHaveBeenCalledExactlyOnceWith("application-test", "en-US");
     expect(screen.getByText("Professional summary")).toBeTruthy();
+    await user.click(screen.getByRole("checkbox", { name: /Revisei o conteúdo/ }));
     await user.click(screen.getByRole("button", { name: /Salvar currículo em PDF/ }));
     expect(doc.documentElement.lang).toBe("en-US");
     expect(doc.body.textContent).toContain("Data analysis");
@@ -121,11 +122,13 @@ describe("Prévia do currículo", () => {
     expect(screen.queryByRole("button", { name: /Salvar currículo em PDF/ })).toBeNull();
     await user.click(screen.getByRole("button", { name: "Gerar prévia do currículo" }));
     await screen.findByText("Pessoa de Teste");
+    await user.click(screen.getByRole("checkbox", { name: /Revisei o conteúdo/ }));
     await user.click(screen.getByRole("button", { name: /Salvar currículo em PDF/ }));
     expect(print).toHaveBeenCalledOnce();
     expect(doc.body.textContent).toContain("Pessoa de Teste");
     expect(doc.body.textContent).toContain("Criar relatórios");
     expect(doc.body.textContent).not.toContain("Kubernetes");
+    expect(doc.body.textContent).not.toContain("Revisei o conteúdo");
     expect(doc.body.textContent).not.toContain("Revise o conteúdo antes de usar.");
     expect(generateResumePreview).toHaveBeenCalledTimes(1);
   });
@@ -200,4 +203,22 @@ describe("Prévia do currículo", () => {
     expect(screen.queryByText("Pessoa de Teste")).toBeNull();
     expect(generateResumePreview).toHaveBeenCalledTimes(1);
   });
+});
+
+it("exige revisão da prévia e reinicia a confirmação ao trocar idioma ou gerar novamente", async () => {
+  const user = userEvent.setup();
+  vi.mocked(generateResumePreview).mockResolvedValue(preview);
+  render(<ResumePanel applicationId="application-test" />);
+  await user.click(screen.getByRole("button", {name: "Gerar prévia do currículo"}));
+  const pdf = screen.getByRole("button", {name: /Salvar currículo em PDF/}) as HTMLButtonElement;
+  expect(pdf.disabled).toBe(true);
+  await user.click(screen.getByRole("checkbox", {name: /Revisei o conteúdo/}));
+  expect(pdf.disabled).toBe(false);
+  await user.selectOptions(screen.getByLabelText("Idioma do currículo"), "es");
+  await user.selectOptions(screen.getByLabelText("Idioma do currículo"), "pt-BR");
+  expect(pdf.disabled).toBe(true);
+  await user.click(screen.getByRole("checkbox", {name: /Revisei o conteúdo/}));
+  await user.click(screen.getByRole("button", {name: "Gerar prévia do currículo"}));
+  expect((await screen.findByRole("button", {name: /Salvar currículo em PDF/}) as HTMLButtonElement).disabled).toBe(true);
+  cleanup();
 });

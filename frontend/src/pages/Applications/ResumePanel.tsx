@@ -40,6 +40,7 @@ export default function ResumePanel({
   const [error, setError] = useState<string | null>(null);
   const submitting = useRef(false);
   const documentRef = useRef<HTMLElement | null>(null);
+  const [reviewed, setReviewed] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
 
   const [original, setOriginal] = useState<ResumePreview | null>(null);
@@ -51,6 +52,7 @@ export default function ResumePanel({
     if (submitting.current || language === "pt-BR") return;
     submitting.current = true;
     setTranslating(true);
+    setReviewed(false);
     setError(null);
     setPdfError(null);
     try {
@@ -64,7 +66,7 @@ export default function ResumePanel({
   }
 
   function savePdf() {
-    if (!preview || !documentRef.current) return;
+    if (!preview || !documentRef.current || !reviewed || translating) return;
     setPdfError(null);
     try {
       printResume(documentRef.current, preview.name, preview.language ?? "pt-BR");
@@ -78,6 +80,7 @@ export default function ResumePanel({
 
     submitting.current = true;
     setLoading(true);
+    setReviewed(false);
     setError(null);
     setPreview(null);
     setPdfError(null);
@@ -118,6 +121,7 @@ export default function ResumePanel({
             <select id={`resume-language-${applicationId}`} value={language} disabled={translating} onChange={(event) => {
               const selected = event.target.value as ResumeLanguage;
               setLanguage(selected);
+              setReviewed(false);
               setError(null);
               if (selected === "pt-BR" && original) setPreview(original);
             }}>
@@ -134,6 +138,33 @@ export default function ResumePanel({
             {translating && <RobotStatus working message="Traduzindo seu currículo…" />}
             {preview.language && <p role="status">Tradução pronta. Revise o currículo antes de salvar o PDF.</p>}
           </div>
+
+          <div className="resume-review">
+            <h3>Confira antes de salvar o PDF</h3>
+            <p>🤖 Confira os avisos abaixo e o currículo completo. Para corrigir informações, vá a Meu perfil, salve as alterações e gere uma nova prévia nesta vaga.</p>
+            <p>Inclua somente informações verdadeiras. Estes avisos orientam a revisão; não representam uma nota nem aprovação em seleção.</p>
+
+            <ul>
+              {preview.warnings.map((warning, index) => (
+                <li key={index}>{warning}</li>
+              ))}
+            </ul>
+
+            {preview.ats_keywords.length > 0 && (
+              <p>
+                <strong>Palavras-chave identificadas:</strong>{" "}
+                {preview.ats_keywords.join(" · ")}
+              </p>
+            )}
+
+            {preview.unsupported_requirements.length > 0 && (
+              <p>
+                <strong>Requisitos sem correspondência na análise:</strong>{" "}
+                {preview.unsupported_requirements.join(" · ")}
+              </p>
+            )}
+          </div>
+
 
           <details open>
             <summary>Ver currículo para {preview.job_title}</summary>
@@ -251,32 +282,15 @@ export default function ResumePanel({
             </article>
           </details>
 
-          <div className="resume-review">
-            <h3>Revisão antes de usar</h3>
-
-            <ul>
-              {preview.warnings.map((warning, index) => (
-                <li key={index}>{warning}</li>
-              ))}
-            </ul>
-
-            {preview.ats_keywords.length > 0 && (
-              <p>
-                <strong>Palavras-chave identificadas:</strong>{" "}
-                {preview.ats_keywords.join(" · ")}
-              </p>
-            )}
-
-            {preview.unsupported_requirements.length > 0 && (
-              <p>
-                <strong>Requisitos sem correspondência na análise:</strong>{" "}
-                {preview.unsupported_requirements.join(" · ")}
-              </p>
-            )}
-          </div>
 
           <div className="resume-export">
-            <button className="primary-button" type="button" onClick={savePdf} disabled={translating || language !== (preview.language ?? "pt-BR")}>
+            <p>
+              <label>
+                <input type="checkbox" checked={reviewed} disabled={translating} onChange={(event) => setReviewed(event.target.checked)} />
+                {" "}Revisei o conteúdo e os avisos desta prévia.
+              </label>
+            </p>
+            <button className="primary-button" type="button" onClick={savePdf} disabled={!reviewed || translating || language !== (preview.language ?? "pt-BR")}>
               Salvar currículo em PDF 📄
             </button>
             <p>Na janela de impressão, escolha “Salvar como PDF”, papel A4 e desative cabeçalhos e rodapés. Confira as páginas antes de salvar.</p>
@@ -284,7 +298,7 @@ export default function ResumePanel({
             {pdfError && <p role="alert">{pdfError}</p>}
           </div>
 
-          <button type="button" disabled={translating} onClick={() => { setPreview(null); setOriginal(null); setPdfError(null); }}>
+          <button type="button" disabled={translating} onClick={() => { setPreview(null); setOriginal(null); setPdfError(null); setReviewed(false); }}>
             Fechar prévia
           </button>
         </div>

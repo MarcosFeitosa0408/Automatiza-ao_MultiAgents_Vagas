@@ -64,10 +64,23 @@ def build_resume_preview(
 
     warnings: list[str] = []
 
-    if not profile.candidate.email.strip():
+    def missing(value: str | None) -> bool:
+        return not value or value.strip().casefold() in (
+            "", "nao_identificado", "não identificado", "n/a", "na",
+        )
+
+    if missing(profile.candidate.name):
+        warnings.append("Preencha seu nome em Meu perfil > Identificação e apresentação.")
+
+    if missing(personalization.professional_title):
+        warnings.append("Confira o título profissional em Meu perfil > Identificação e apresentação.")
+    if missing(personalization.professional_summary):
+        warnings.append("Preencha o resumo em Meu perfil > Identificação e apresentação e gere outra prévia.")
+
+    if missing(profile.candidate.email):
         warnings.append("Preencha o e-mail de contato no perfil.")
 
-    if not profile.candidate.phone.strip():
+    if missing(profile.candidate.phone):
         warnings.append("Preencha o telefone de contato no perfil.")
 
     if not personalization.selected_skills:
@@ -76,12 +89,29 @@ def build_resume_preview(
         )
 
     if any(
-        not experience.current and not experience.end
+        not experience.current and missing(getattr(experience, "end", None))
         for experience in experiences
     ):
         warnings.append(
             "Confira a data de término das experiências encerradas."
         )
+
+    if missing(profile.candidate.location.city) or missing(profile.candidate.location.country):
+        warnings.append("Confira cidade e país em Meu perfil > Identificação e apresentação. Endereço completo não é necessário.")
+
+    if not profile.education:
+        warnings.append("Nenhuma formação cadastrada. Inclua em Meu perfil > Formação apenas se fizer parte da sua trajetória.")
+    elif any(missing(item.degree) or missing(item.institution) or missing(item.status) for item in profile.education):
+        warnings.append("Complete curso, instituição e situação das formações em Meu perfil > Formação.")
+
+    if any(missing(item.role) or missing(item.company) or missing(item.start) for item in experiences):
+        warnings.append("Confira cargo, empresa e data de início das experiências selecionadas em Meu perfil > Experiências.")
+    if any(not item.responsibilities and not item.achievements for item in experiences):
+        warnings.append("Descreva atividades ou resultados reais das experiências em Meu perfil > Experiências.")
+    if any(missing(item.name) or missing(item.description) for item in projects):
+        warnings.append("Complete nome e descrição dos projetos selecionados em Meu perfil > Projetos.")
+    if not experiences and not projects:
+        warnings.append("Nenhuma experiência ou projeto foi selecionado para esta vaga. Confira seus dados e os requisitos; não inclua experiências que não possui.")
 
     warnings.append(
         "Revise o conteúdo antes de usar. Esta prévia não envia candidatura "
