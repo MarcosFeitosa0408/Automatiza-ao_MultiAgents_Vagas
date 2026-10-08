@@ -8,3 +8,18 @@ it("propõe recuperação reversível de acentos sem alterar texto correto ou ca
   expect(repairText("Texto com � perdido")).toBe("Texto com � perdido");
   expect(repairText("Ã isolado")).toBe("Ã isolado");
 });
+
+it("corrige acentos corrompidos preservando emoji e texto correto", () => {
+  expect(repairText("🤖 AgÃªncia — São Paulo"))
+    .toBe("🤖 Agência — São Paulo");
+});
+
+it("corrige um trecho sem modificar os acentos corretos ao lado", () => {
+  expect(repairText("Análise de dados na agÃªncia"))
+    .toBe("Análise de dados na agência");
+});
+
+it("corrige sequências recuperáveis sem apagar caracteres perdidos", () => {
+  expect(repairText("AgÃªncia com � perdido"))
+    .toBe("Agência com � perdido");
+});
