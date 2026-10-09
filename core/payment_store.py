@@ -74,6 +74,22 @@ class PaymentStore:
             ))
             return dict(self._payment(db, payment_id, user_id))
 
+    def expire_rejected_creation(self, payment_id, user_id):
+        """Uso interno, somente apos rejeicao explicita do PagBank."""
+        with self.accounts.connection() as db:
+            db.execute("BEGIN IMMEDIATE")
+            self._active_member(db, user_id)
+            row = self._payment(db, payment_id, user_id)
+            if row["state"] != "CREATING" or row["order_id"] is not None:
+                return False
+            db.execute(
+                "UPDATE subscription_payments SET state='EXPIRED' "
+                "WHERE id=? AND user_id=? AND state='CREATING' "
+                "AND order_id IS NULL",
+                (payment_id, user_id),
+            )
+            return True
+
     def record_order(self, payment_id, user_id, order):
         """Uso interno: recebe a resposta da criacao feita pelo servidor."""
         with self.accounts.connection() as db:

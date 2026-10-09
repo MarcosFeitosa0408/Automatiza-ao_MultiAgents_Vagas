@@ -12,6 +12,40 @@ from urllib.request import (
 from fastapi import HTTPException
 
 
+
+class PixExpirationRejected(HTTPException):
+    def __init__(self):
+        super().__init__(
+            502,
+            "O PagBank rejeitou a data de vencimento desta solicitacao.",
+        )
+
+
+def pix_expiration_was_rejected(error):
+    if not isinstance(error, HTTPError) or error.code != 400:
+        return False
+    try:
+        body = error.read(65537)
+        if len(body) > 65536:
+            return False
+        result = json.loads(body)
+    except (ValueError, UnicodeError, OSError):
+        return False
+    if not isinstance(result, dict):
+        return False
+    messages = result.get("error_messages")
+    if not isinstance(messages, list) or len(messages) != 1:
+        return False
+    message = messages[0]
+    return (
+        isinstance(message, dict)
+        and message.get("code") == "40002"
+        and message.get("parameter_name")
+        == "charges[0].payment_method.pix.expiration_date"
+        and message.get("description") == "must be a future date"
+    )
+
+
 class NoRedirect(HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         return None
@@ -70,6 +104,9 @@ class PagBankClient:
                 type(error).__name__,
                 error.code if isinstance(error, HTTPError) else "nao informado",
             )
+            # Somente a rejeicao explicita permite substituir a solicitacao.
+            if pix_expiration_was_rejected(error):
+                raise PixExpirationRejected() from None
             # Nao expoe token, dados pessoais ou resposta bruta do banco.
             raise HTTPException(
                 502,

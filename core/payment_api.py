@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, SecretStr, field_validator
 
 from core.accounts import get_store
 from core.auth_api import require_user
-from core.pagbank import PagBankClient
+from core.pagbank import PagBankClient, PixExpirationRejected
 from core.payment_store import PaymentStore
 from core.subscriptions import SubscriptionStore
 
@@ -89,29 +89,40 @@ def create_pix(payload: PixRequest, user=Depends(require_user)):
     client = PagBankClient()
     SubscriptionStore(store)
     payments = PaymentStore(store)
-    payment = payments.reserve(user["id"], client.environment)
+    for attempt in range(2):
+        payment = payments.reserve(user["id"], client.environment)
 
-    # Confira a cobranca anterior antes de oferecer outro QR Code.
-    # Se ja estiver paga, devolva a confirmacao, sem cobrar novamente.
-    if payment["state"] == "WAITING" and payment["order_id"]:
-        payment = payments.confirm(payment["id"], user["id"], client)
-        if payment["state"] in ("EXPIRED", "DECLINED", "CANCELED"):
-            payment = payments.reserve(user["id"], client.environment)
+        # Confira a cobranca anterior antes de oferecer outro QR Code.
+        # Se ja estiver paga, devolva a confirmacao, sem cobrar novamente.
+        if payment["state"] == "WAITING" and payment["order_id"]:
+            payment = payments.confirm(payment["id"], user["id"], client)
+            if payment["state"] in ("EXPIRED", "DECLINED", "CANCELED"):
+                payment = payments.reserve(user["id"], client.environment)
 
-    if payment["state"] == "CREATING":
-        parameters = frozen_request(
-            store, payment, user, payload.tax_id.get_secret_value()
-        )
-        order = client.create_pix(**parameters)
-        payment = payments.record_order(payment["id"], user["id"], order)
-        # Depois de registrar o pedido, a requisicao com CPF nao e mais
-        # necessaria para recuperar o pagamento.
-        with store.connection() as db:
-            db.execute(
-                "DELETE FROM subscription_payment_requests WHERE payment_id=?",
-                (payment["id"],),
+        if payment["state"] == "CREATING":
+            parameters = frozen_request(
+                store, payment, user, payload.tax_id.get_secret_value()
             )
-    return public_payment(payment)
+            try:
+                order = client.create_pix(**parameters)
+            except PixExpirationRejected:
+                if attempt == 1:
+                    raise
+                replaced = payments.expire_rejected_creation(
+                    payment["id"], user["id"]
+                )
+                if not replaced:
+                    raise
+                continue
+            payment = payments.record_order(payment["id"], user["id"], order)
+            # Depois de registrar o pedido, a requisicao com CPF nao e mais
+            # necessaria para recuperar o pagamento.
+            with store.connection() as db:
+                db.execute(
+                    "DELETE FROM subscription_payment_requests WHERE payment_id=?",
+                    (payment["id"],),
+                )
+        return public_payment(payment)
 
 
 @router.get("/{payment_id}")

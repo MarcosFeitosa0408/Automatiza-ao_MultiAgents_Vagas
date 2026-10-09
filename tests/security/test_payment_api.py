@@ -153,3 +153,55 @@ def test_pix_api_replaces_expired_charge_without_losing_history(pix_case):
         ).fetchone()
     assert old["state"] == "EXPIRED"
     assert old["qr_text"] is None
+
+
+def test_pix_recovers_explicitly_rejected_expiration(pix_case, monkeypatch):
+    import time
+    from datetime import datetime
+    from core.pagbank import PixExpirationRejected
+    from core.payment_store import PaymentStore
+
+    client, headers, bank = pix_case
+    store = payment_api.get_store()
+    token = headers[0]["Authorization"].removeprefix("Bearer ")
+    user = store.current_user(token)
+    payments = PaymentStore(store)
+    old = payments.reserve(
+        user["id"], "sandbox", now=time.time() - 3600
+    )
+
+    original_create = bank.create_pix
+    attempts = []
+
+    def create_with_expiration_check(**parameters):
+        attempts.append(parameters)
+        expires = datetime.fromisoformat(
+            parameters["expires_at"]
+        ).timestamp()
+        if expires <= time.time():
+            raise PixExpirationRejected()
+        return original_create(**parameters)
+
+    monkeypatch.setattr(bank, "create_pix", create_with_expiration_check)
+    response = client.post(
+        "/auth/pix",
+        headers=headers[0],
+        json={"tax_id": "12345678909"},
+    )
+
+    assert response.status_code == 200
+    current = response.json()
+    assert current["state"] == "WAITING"
+    assert current["amount"] == 1990
+    assert current["id"] != old["id"]
+    assert len(attempts) == 2
+    assert attempts[0]["reference"] != attempts[1]["reference"]
+    assert payments.get(old["id"], user["id"])["state"] == "EXPIRED"
+
+    repeated = client.post(
+        "/auth/pix",
+        headers=headers[0],
+        json={"tax_id": "12345678909"},
+    )
+    assert repeated.json()["id"] == current["id"]
+    assert len(attempts) == 2
