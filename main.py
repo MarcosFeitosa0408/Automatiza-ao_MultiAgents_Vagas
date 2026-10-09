@@ -56,6 +56,8 @@ app.add_middleware(
 )
 
 app.include_router(auth_router)
+from core.subscription_api import router as subscription_router
+app.include_router(subscription_router)
 app.include_router(admin_router)
 from core.help_api import router as help_router
 app.include_router(help_router)

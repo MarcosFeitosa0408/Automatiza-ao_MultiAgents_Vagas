@@ -109,7 +109,13 @@ class AccountStore:
                 raise HTTPException(429, 'Muitas tentativas. Aguarde 15 minutos.', headers={'Retry-After': '900'})
             db.execute('INSERT INTO attempts VALUES (?, ?)', (bucket, now))
 
-    def create_user(self, name: str, email: str, password: str):
+    def create_user(
+        self, name: str, email: str, password: str, *, commercial: bool = False
+    ):
+        if commercial:
+            from core.subscriptions import SubscriptionStore
+            SubscriptionStore(self)
+        state = 'active' if commercial else 'pending'
         user_id = str(uuid4())
         hashed = password_hash.hash(password)
         profile = empty_profile(user_id, name, email)
@@ -117,10 +123,19 @@ class AccountStore:
             with self.connection() as db:
                 db.execute('INSERT INTO users VALUES (?, ?, ?, ?)', (user_id, email, name, hashed))
                 db.execute('INSERT INTO profiles VALUES (?, ?)', (user_id, profile.model_dump_json()))
-                db.execute('INSERT INTO account_access VALUES (?, ?, ?)', (user_id, 'pending', 'user'))
+                db.execute('INSERT INTO account_access VALUES (?, ?, ?)', (user_id, state, 'user'))
+                from core.access_history import record_access_event
+                record_access_event(db, user_id, 'REGISTER')
+                if commercial:
+                    db.execute(
+                        'INSERT INTO subscriptions '
+                        '(user_id, trial_started_at, trial_ends_at) '
+                        'VALUES (?, NULL, NULL)',
+                        (user_id,),
+                    )
         except (sqlite3.IntegrityError, psycopg.errors.UniqueViolation):
             raise HTTPException(409, 'Não foi possível cadastrar com esse e-mail.') from None
-        return dict(id=user_id, name=name, email=email, role='user', state='pending')
+        return dict(id=user_id, name=name, email=email, role='user', state=state)
 
     def check_password(self, email: str, password: str):
         with self.connection() as db:
@@ -144,6 +159,8 @@ class AccountStore:
                 raise HTTPException(403, 'Esta conta não está autorizada.')
             db.execute('DELETE FROM sessions WHERE expires_at <= ?', (time.time(),))
             db.execute('INSERT INTO sessions VALUES (?, ?, ?)', (hashlib.sha256(token.encode()).hexdigest(), user_id, time.time() + SESSION_SECONDS))
+            from core.access_history import record_access_event
+            record_access_event(db, user_id, 'LOGIN')
         return token
 
     def current_user(self, token: str):

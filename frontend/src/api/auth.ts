@@ -18,3 +18,14 @@ export function requestPasswordRecovery(email: string): Promise<{ message: strin
 export function resetAccountPassword(token: string, password: string): Promise<{ message: string }> {
   return apiRequest("/auth/reset-password", { method: "POST", body: JSON.stringify({ token, password }) });
 }
+
+export function registerTrialAccount(
+  name: string,
+  email: string,
+  password: string,
+): Promise<AccountSession> {
+  return apiRequest<AccountSession>("/auth/register-trial", {
+    method: "POST",
+    body: JSON.stringify({ name, email, password }),
+  });
+}

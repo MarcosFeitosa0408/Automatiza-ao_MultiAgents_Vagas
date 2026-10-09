@@ -1,3 +1,4 @@
+import AdminMembers from "./AdminMembers";
 import AdminQuestions from "./AdminQuestions";
 import { useEffect, useRef, useState } from "react";
 import { changeAccess, deleteAccount, listAccounts } from "../../api/admin";
@@ -99,6 +100,7 @@ export default function AdminAccounts() {
         </div>}
       </article>)}
     </section>
+    <AdminMembers />
     <AdminQuestions />
   </main>;
 }

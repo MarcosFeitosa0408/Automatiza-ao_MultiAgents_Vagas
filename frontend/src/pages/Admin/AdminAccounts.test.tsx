@@ -5,6 +5,8 @@ import AdminAccounts from "./AdminAccounts";
 import { listAccounts, changeAccess, deleteAccount } from "../../api/admin";
 import type { ManagedAccount } from "../../api/admin";
 
+// A secao de membros possui testes proprios.
+vi.mock("./AdminMembers", () => ({ default: () => null }));
 vi.mock("../../api/admin", () => ({ listAccounts: vi.fn(), changeAccess: vi.fn(), deleteAccount: vi.fn() }));
 const owner: ManagedAccount = { id: "owner", name: "Owner", email: "owner@example.invalid", role: "admin", state: "active" };
 const member: ManagedAccount = { id: "member", name: "Member", email: "member@example.invalid", role: "user", state: "pending" };

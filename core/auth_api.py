@@ -34,10 +34,49 @@ class RegisterRequest(LoginRequest):
         return value
 
 
-def require_user(credentials: HTTPAuthorizationCredentials | None = Depends(bearer)):
+def require_user(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer),
+):
     if not credentials or credentials.scheme.casefold() != 'bearer':
         raise HTTPException(401, 'Entre na sua conta para continuar.', headers={'WWW-Authenticate': 'Bearer'})
-    return get_store().current_user(credentials.credentials)
+
+    store = get_store()
+    user = store.current_user(credentials.credentials)
+    route = request.scope.get('route')
+    route_path = getattr(route, 'path', request.url.path)
+
+    # Entrada, ajuda e controles administrativos mantêm suas proteções próprias.
+    if request.url.path.startswith(('/auth/', '/help/', '/admin/')):
+        return user
+
+    from core.subscriptions import SubscriptionStore
+    status = SubscriptionStore(store).status(user['id'])
+
+    if status['access_allowed']:
+        return user
+
+    consultation_routes = {
+        '/profile',
+        '/job-applications',
+        '/job-applications/metrics',
+        '/job-applications/{application_id}',
+    }
+    if (
+        status['read_allowed']
+        and request.method == 'GET'
+        and route_path in consultation_routes
+    ):
+        return user
+
+    raise HTTPException(
+        402,
+        detail={
+            'code': 'subscription_required',
+            'message': 'Ative seu plano para utilizar esta função. Seu perfil e histórico permanecem salvos.',
+            'subscription': status,
+        },
+    )
 
 
 def session_result(store, user):
@@ -50,6 +89,22 @@ def register(payload: RegisterRequest, request: Request):
     store.limit('register:' + (request.client.host if request.client else 'unknown'), 10)
     store.create_user(payload.name, payload.email, payload.password.get_secret_value())
     return {'pending_approval': True, 'message': 'Conta criada. Aguarde a autorização do administrador.'}
+
+
+@router.post('/register-trial', status_code=201)
+def register_trial(payload: RegisterRequest, request: Request):
+    store = get_store()
+    store.limit(
+        'register:' + (request.client.host if request.client else 'unknown'),
+        10,
+    )
+    user = store.create_user(
+        payload.name,
+        payload.email,
+        payload.password.get_secret_value(),
+        commercial=True,
+    )
+    return session_result(store, user)
 
 
 @router.post('/login')

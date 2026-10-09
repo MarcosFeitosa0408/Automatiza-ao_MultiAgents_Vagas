@@ -101,7 +101,7 @@ const skillFields = [
   ["automation", "Automação"],
 ] as const;
 
-export default function Profile() {
+export default function Profile({ readOnly = false }: { readOnly?: boolean } = {}) {
   const [profile, setProfile] = useState<MasterProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -140,7 +140,7 @@ export default function Profile() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!profile || submitting.current) {
+    if (readOnly || !profile || submitting.current) {
       return;
     }
 
@@ -291,7 +291,7 @@ export default function Profile() {
           </p>
         )}
 
-        <fieldset disabled={saving}>
+        <fieldset disabled={saving || readOnly}>
           <legend>Identificação e apresentação</legend>
 
           <div className="form-grid">
@@ -315,7 +315,7 @@ export default function Profile() {
           </div>
         </fieldset>
 
-        <fieldset disabled={saving}>
+        <fieldset disabled={saving || readOnly}>
           <legend>Objetivos e disponibilidade</legend>
 
           <div className="form-grid">
@@ -338,7 +338,7 @@ export default function Profile() {
           </div>
         </fieldset>
 
-        <fieldset disabled={saving}>
+        <fieldset disabled={saving || readOnly}>
           <legend>Competências</legend>
           <p>Escreva uma competência por linha em cada campo.</p>
 
@@ -355,7 +355,7 @@ export default function Profile() {
           </div>
         </fieldset>
 
-        <fieldset disabled={saving}>
+        <fieldset disabled={saving || readOnly}>
           <legend>Idiomas e links</legend>
 
           <div className="form-grid">
@@ -367,7 +367,7 @@ export default function Profile() {
           </div>
         </fieldset>
 
-        <fieldset disabled={saving}>
+        <fieldset disabled={saving || readOnly}>
   <legend>Histórico profissional e acadêmico</legend>
 
   <ProfileSections
@@ -377,14 +377,16 @@ export default function Profile() {
 </fieldset>
 
 <p className="form-help">
-  Confira suas alterações antes de salvar.
-  Registros removidos serão excluídos do perfil ao clicar em
-  “Salvar meu perfil”.
+  {readOnly
+    ? "Seu perfil está disponível somente para consulta."
+    : "Confira suas alterações antes de salvar. Registros removidos serão excluídos do perfil ao clicar em Salvar meu perfil."}
 </p>
 
-        <button className="primary-button" type="submit" disabled={saving}>
-          {saving ? "Salvando..." : "Salvar meu perfil"}
-        </button>
+        {!readOnly && (
+          <button className="primary-button" type="submit" disabled={saving}>
+            {saving ? "Salvando..." : "Salvar meu perfil"}
+          </button>
+        )}
       </form>
     </section>
   );

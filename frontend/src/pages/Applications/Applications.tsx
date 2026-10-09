@@ -37,7 +37,13 @@ function formatDate(value: string) {
     : date.toLocaleDateString("pt-BR");
 }
 
-export default function Applications({ initialApplicationId }: { initialApplicationId?: string } = {}) {
+export default function Applications({
+  initialApplicationId,
+  readOnly = false,
+}: {
+  initialApplicationId?: string;
+  readOnly?: boolean;
+} = {}) {
   const [selectedId, setSelectedId] = useState(initialApplicationId);
   const [applications, setApplications] =
     useState<JobApplicationObject[]>([]);
@@ -222,7 +228,8 @@ export default function Applications({ initialApplicationId }: { initialApplicat
                         <span className="table-secondary">
                           Cadastrada em {new Date(application.created_at).toLocaleString("pt-BR")}
                         </span>
-                        <DeleteApplication
+                        {!readOnly && <>
+<DeleteApplication
                           applicationId={application.application_id}
                           title={application.job.title}
                           company={application.job.company}
@@ -264,6 +271,39 @@ export default function Applications({ initialApplicationId }: { initialApplicat
   key={`interview-${application.application_id}-${application.updated_at}`}
   applicationId={application.application_id}
 />
+</>}
+{readOnly && (
+  <details>
+    <summary>Consultar anúncio e histórico</summary>
+    <p>{application.job.description}</p>
+    <h3>Requisitos obrigatórios</h3>
+    <ul>
+      {application.job.requirements.map((value, index) => (
+        <li key={index}>{value}</li>
+      ))}
+    </ul>
+    <h3>Requisitos desejáveis</h3>
+    <ul>
+      {application.job.desirable_requirements.map((value, index) => (
+        <li key={index}>{value}</li>
+      ))}
+    </ul>
+    <h3>Histórico das etapas</h3>
+    {application.tracking?.history.length ? (
+      <ol>
+        {application.tracking.history.map((event, index) => (
+          <li key={index}>
+            <strong>{statusLabels[event.status] ?? event.status}</strong>
+            {" — "}
+            {new Date(event.occurred_at).toLocaleString("pt-BR")}
+            <p>{event.note}</p>
+          </li>
+        ))}
+      </ol>
+    ) : <p>Nenhuma etapa registrada.</p>}
+  </details>
+)}
+
                       </td>
                       <td>{application.job.location || "Não informado"}</td>
                       <td>

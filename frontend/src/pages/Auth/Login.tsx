@@ -1,7 +1,7 @@
 import PasswordInput from "../../components/PasswordInput";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { loginAccount, registerAccount } from "../../api/auth";
+import { loginAccount, registerTrialAccount } from "../../api/auth";
 import type { AccountSession } from "../../api/auth";
 import PasswordRecovery from "./PasswordRecovery";
 import { ApiError } from "../../api/client";
@@ -50,10 +50,9 @@ export default function Login({ onAuthenticated, message }: Props) {
     setBusy(true);
     try {
       if (registering) {
-        const result = await registerAccount(name, email, password);
+        const session = await registerTrialAccount(name, email, password);
         form.reset();
-        setNotice(result.message);
-        setRegistering(false);
+        onAuthenticated(session);
       } else {
         const session = await loginAccount(email, password);
         form.reset();
@@ -85,12 +84,13 @@ export default function Login({ onAuthenticated, message }: Props) {
       <figure className="auth-robots">
         <img src="/images/robots-globe.jpg" width="1408" height="768" alt="Pequenos robôs ao redor de um globo, ilustrando a preparação para oportunidades de trabalho." />
         <figcaption>Seu próximo passo começa aqui <span aria-hidden="true">🌎🤖</span></figcaption>
-        <p>Encontre oportunidades, prepare seu currículo e pratique para entrevistas.</p>
+        <p>Encontre vagas alinhadas ao seu perfil, prepare seu currículo para sistemas ATS e pratique entrevistas. Organize suas candidaturas e acompanhe cada etapa, mantendo as decisões sob seu controle.</p>
       </figure>
       <section className="dashboard-panel auth-card">
         <p className="dashboard-eyebrow">MULTIAGENTS VAGAS</p>
         <h1>{registering ? "Criar minha conta" : "Entrar na plataforma"}</h1>
-        <p>Seu perfil e suas oportunidades pertencem à sua conta. Novos cadastros precisam da autorização do administrador.</p>
+        <p>Crie sua conta e ative o teste gratuito de 24 horas. Primeiro mês por R$ 19,90; renovação por R$ 29,90.</p>
+        <p>Seu perfil é privado e vinculado à sua conta.</p>
         {message && <p role="status">{message}</p>}
         {notice && <p role="status">{notice}</p>}
         {error && <p className="dashboard-error" role="alert">{error}</p>}
@@ -110,7 +110,7 @@ export default function Login({ onAuthenticated, message }: Props) {
               <label htmlFor="account-confirmation">Confirmar senha</label>
               <PasswordInput fieldLabel="confirmação da senha" id="account-confirmation" name="confirmation" autoComplete="new-password" required minLength={8} maxLength={128} />
             </>}
-            <button className="primary-button" type="submit">{busy ? "Aguarde..." : registering ? "Solicitar acesso" : "Entrar"}</button>
+            <button className="primary-button" type="submit">{busy ? "Aguarde..." : registering ? "Criar conta para testar" : "Entrar"}</button>
           </fieldset>
         </form>
         <button className="secondary-button" type="button" disabled={busy} onClick={() => { setRegistering(!registering); setError(null); }}>
