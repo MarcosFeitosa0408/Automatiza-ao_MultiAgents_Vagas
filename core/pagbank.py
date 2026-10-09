@@ -1,5 +1,6 @@
 """Comunicacao com PagBank. Credenciais ficam somente no servidor."""
 import json
+import logging
 import os
 import re
 from datetime import datetime, timedelta, timezone
@@ -63,7 +64,12 @@ class PagBankClient:
                     raise ValueError("Resposta inesperada")
                 return result
         except (HTTPError, URLError, TimeoutError, OSError,
-                ValueError, UnicodeError):
+                ValueError, UnicodeError) as error:
+            logging.getLogger(__name__).warning(
+                "PagBank: falha na requisicao; tipo=%s; HTTP=%s",
+                type(error).__name__,
+                error.code if isinstance(error, HTTPError) else "nao informado",
+            )
             # Nao expoe token, dados pessoais ou resposta bruta do banco.
             raise HTTPException(
                 502,
