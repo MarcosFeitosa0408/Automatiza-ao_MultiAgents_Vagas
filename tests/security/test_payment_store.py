@@ -184,3 +184,89 @@ def test_paid_member_cannot_start_unused_trial_after_month_ends(payment_case):
     assert status["trial_available"] is False
     assert status["access_allowed"] is False
     assert status["next_payment_amount"] == 2990
+
+
+def test_prepaid_renewal_shows_full_validity_and_keeps_access(payment_case):
+    _, subscriptions, payments, _, user = payment_case
+
+    first = payments.reserve(user["id"], "sandbox", now=1000)
+    assert first["amount"] == 1990
+    order = order_for(first)
+    payments.record_order(first["id"], user["id"], order)
+    first = payments.confirm(
+        first["id"], user["id"], FakeBank(order), now=1000
+    )
+
+    renewal = payments.reserve(user["id"], "sandbox", now=2000)
+    assert renewal["amount"] == 2990
+    order = order_for(renewal)
+    payments.record_order(renewal["id"], user["id"], order)
+    renewal = payments.confirm(
+        renewal["id"], user["id"], FakeBank(order), now=2000
+    )
+
+    assert renewal["period_start"] == first["period_end"]
+    assert renewal["period_end"] == first["period_end"] + MONTH_SECONDS
+
+    for timestamp in (
+        2000,
+        first["period_end"] - 1,
+        first["period_end"],
+        renewal["period_end"] - 1,
+    ):
+        status = subscriptions.status(user["id"], now=timestamp)
+        assert status["kind"] == "paid"
+        assert status["access_allowed"] is True
+        assert status["paid_ends_at"] == renewal["period_end"]
+        assert status["next_payment_amount"] == 2990
+
+    expired = subscriptions.status(
+        user["id"], now=renewal["period_end"]
+    )
+    assert expired["access_allowed"] is False
+
+    repeated = payments.confirm(
+        renewal["id"], user["id"], FakeBank(order), now=3000
+    )
+    assert repeated["period_end"] == renewal["period_end"]
+
+
+def test_future_payment_does_not_bridge_unpaid_gap(payment_case):
+    accounts, subscriptions, payments, _, user = payment_case
+
+    first = payments.reserve(user["id"], "sandbox", now=1000)
+    order = order_for(first)
+    payments.record_order(first["id"], user["id"], order)
+    first = payments.confirm(
+        first["id"], user["id"], FakeBank(order), now=1000
+    )
+
+    renewal_start = first["period_end"] + 100
+    renewal = payments.reserve(
+        user["id"], "sandbox", now=renewal_start
+    )
+    order = order_for(renewal)
+    payments.record_order(renewal["id"], user["id"], order)
+    renewal = payments.confirm(
+        renewal["id"], user["id"], FakeBank(order),
+        now=renewal_start,
+    )
+
+    current = subscriptions.status(user["id"], now=2000)
+    assert current["paid_ends_at"] == first["period_end"]
+    assert current["access_allowed"] is True
+
+    gap = subscriptions.status(
+        user["id"], now=first["period_end"]
+    )
+    assert gap["access_allowed"] is False
+
+    started = subscriptions.status(user["id"], now=renewal_start)
+    assert started["access_allowed"] is True
+    assert started["paid_ends_at"] == renewal["period_end"]
+
+    with accounts.connection() as db:
+        assert db.execute(
+            "SELECT COUNT(*) FROM subscription_payments WHERE user_id=?",
+            (user["id"],),
+        ).fetchone()[0] == 2

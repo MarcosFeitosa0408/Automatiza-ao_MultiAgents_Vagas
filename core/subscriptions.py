@@ -134,7 +134,21 @@ class SubscriptionStore:
             "WHERE user_id=? AND environment=? AND state='PAID'",
             (user_id, environment),
         ).fetchone()[0]
-        result["paid_ends_at"] = paid
+        # Exibe o fim de todos os periodos pagos consecutivos.
+        # A autorizacao continua usando o periodo atualmente em vigor.
+        paid_through = paid
+        if paid is not None and now < paid:
+            future_periods = db.execute(
+                "SELECT period_start, period_end FROM subscription_payments "
+                "WHERE user_id=? AND environment=? AND state='PAID' "
+                "AND period_start>? ORDER BY period_start, period_end",
+                (user_id, environment, now),
+            ).fetchall()
+            for period in future_periods:
+                if period["period_start"] > paid_through:
+                    break
+                paid_through = max(paid_through, period["period_end"])
+        result["paid_ends_at"] = paid_through
         result["next_payment_amount"] = 2990 if paid_count else 1990
 
         if paid is not None and now < paid:
