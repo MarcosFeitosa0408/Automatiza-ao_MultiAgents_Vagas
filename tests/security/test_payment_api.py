@@ -122,7 +122,7 @@ def test_invalid_cpf_does_not_create_payment(pix_case):
 
 
 
-def test_pix_api_replaces_expired_charge_without_losing_history(pix_case):
+def test_pix_api_replaces_bank_canceled_charge_without_losing_history(pix_case):
     import time
 
     client, headers, bank = pix_case
@@ -138,6 +138,15 @@ def test_pix_api_replaces_expired_charge_without_losing_history(pix_case):
             (time.time() - 1801, old_id),
         )
 
+    # So o prazo local nao permite substituicao enquanto o banco aguarda.
+    waiting = client.post(
+        "/auth/pix", headers=headers[0], json={"tax_id": "12345678909"}
+    )
+    assert waiting.json()["id"] == old_id
+    assert waiting.json()["state"] == "WAITING"
+    assert bank.calls == 1
+    next(iter(bank.orders.values()))["charges"][0]["status"] = "CANCELED"
+
     replacement = client.post(
         "/auth/pix", headers=headers[0], json={"tax_id": "12345678909"}
     )
@@ -151,7 +160,7 @@ def test_pix_api_replaces_expired_charge_without_losing_history(pix_case):
             "SELECT state, qr_text FROM subscription_payments WHERE id=?",
             (old_id,),
         ).fetchone()
-    assert old["state"] == "EXPIRED"
+    assert old["state"] == "CANCELED"
     assert old["qr_text"] is None
 
 
@@ -205,3 +214,158 @@ def test_pix_recovers_explicitly_rejected_expiration(pix_case, monkeypatch):
     )
     assert repeated.json()["id"] == current["id"]
     assert len(attempts) == 2
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+def test_legacy_expired_pix_and_replacement_paid_preserve_both_periods(
+    pix_case, monkeypatch, reverse
+):
+    from types import SimpleNamespace
+    from core import payment_store
+
+    client, headers, bank = pix_case
+    monkeypatch.setattr(payment_store, "time", SimpleNamespace(time=lambda: 1000))
+    first = client.post(
+        "/auth/pix", headers=headers[0], json={"tax_id": "12345678909"}
+    ).json()
+    store = payment_api.get_store()
+    # Reproduz uma cobranca encerrada pelo comportamento anterior ao ajuste.
+    with store.connection() as db:
+        db.execute(
+            "UPDATE subscription_payments SET state='EXPIRED', qr_text=NULL WHERE id=?",
+            (first["id"],),
+        )
+    second = client.post(
+        "/auth/pix", headers=headers[0], json={"tax_id": "12345678909"}
+    ).json()
+    assert first["id"] != second["id"]
+    assert bank.calls == 2
+    for order in bank.orders.values():
+        charge = order["charges"][0]
+        charge["status"] = "PAID"
+        charge["amount"]["summary"]["paid"] = charge["amount"]["value"]
+
+    ids = [first["id"], second["id"]]
+    if reverse:
+        ids.reverse()
+    results = []
+    for payment_id in ids:
+        response = client.get("/auth/pix/" + payment_id, headers=headers[0])
+        assert response.status_code == 200
+        assert response.json()["state"] == "PAID"
+        results.append(response.json())
+    assert results[0]["period_start"] == 1000
+    assert results[1]["period_start"] == results[0]["period_end"]
+    assert results[1]["period_end"] == 1000 + 2 * payment_store.MONTH_SECONDS
+    for result in results:
+        again = client.get("/auth/pix/" + result["id"], headers=headers[0])
+        assert again.json()["period_end"] == result["period_end"]
+    user = store.current_user(headers[0]["Authorization"].removeprefix("Bearer "))
+    status = SubscriptionStore(store).status(user["id"], now=1000)
+    assert status["paid_ends_at"] == results[1]["period_end"]
+    assert bank.calls == 2
+
+
+def test_lost_creation_response_reuses_identical_request_after_deadline(
+    pix_case, monkeypatch
+):
+    import io
+    import json
+    from types import SimpleNamespace
+    from urllib.error import URLError
+    from core import pagbank, payment_store
+
+    client, headers, _ = pix_case
+    monkeypatch.setenv("PAGBANK_TOKEN", "token-apenas-de-teste")
+    monkeypatch.setattr(payment_api, "PagBankClient", pagbank.PagBankClient)
+    clock = [1000]
+    monkeypatch.setattr(payment_store, "time", SimpleNamespace(time=lambda: clock[0]))
+    requests = []
+    orders = {}
+
+    class Response(io.BytesIO):
+        status = 200
+
+    class IdempotentBank:
+        def open(self, request, timeout):
+            if request.get_method() == "GET":
+                order = next(iter(orders.values()))
+                return Response(json.dumps(order).encode())
+            key = request.get_header("X-idempotency-key")
+            payload = json.loads(request.data)
+            requests.append((key, request.data))
+            if key not in orders:
+                orders[key] = {
+                    "id": "ORDE_" + key,
+                    "reference_id": payload["reference_id"],
+                    "charges": [{
+                        **payload["charges"][0], "status": "WAITING",
+                        "qr_code": {"text": "codigo-apenas-para-teste"},
+                    }],
+                }
+                # O banco criou o pedido, mas o servidor perdeu a resposta.
+                raise URLError("resposta perdida simulada")
+            return Response(json.dumps(orders[key]).encode())
+
+    monkeypatch.setattr(pagbank, "build_opener", lambda *args: IdempotentBank())
+    failed = client.post(
+        "/auth/pix", headers=headers[0], json={"tax_id": "12345678909"}
+    )
+    assert failed.status_code == 502
+    store = payment_api.get_store()
+    with store.connection() as db:
+        original = dict(db.execute("SELECT * FROM subscription_payments").fetchone())
+        assert original["state"] == "CREATING"
+        # Mudancas no perfil nao podem modificar uma tentativa incerta.
+        db.execute("UPDATE users SET name='Nome atualizado', email='updated@example.invalid' WHERE id=?", (original["user_id"],))
+    assert SubscriptionStore(store).status(original["user_id"], now=1000)["access_allowed"] is False
+
+    clock[0] = 2900
+    recovered = client.post(
+        "/auth/pix", headers=headers[0], json={"tax_id": "12345678909"}
+    )
+    assert recovered.status_code == 200
+    assert recovered.json()["id"] == original["id"]
+    assert recovered.json()["state"] == "WAITING"
+    assert len(orders) == 1
+    assert len(requests) == 2
+    assert requests[0] == requests[1]
+    assert requests[0][0] == original["reference"]
+    with store.connection() as db:
+        assert db.execute("SELECT COUNT(*) FROM subscription_payments").fetchone()[0] == 1
+        assert db.execute("SELECT COUNT(*) FROM subscription_payment_requests").fetchone()[0] == 0
+
+    charge = next(iter(orders.values()))["charges"][0]
+    charge["status"] = "PAID"
+    charge["amount"]["summary"] = {"paid": 1990, "refunded": 0}
+    url = "/auth/pix/" + original["id"]
+    confirmed = client.get(url, headers=headers[0])
+    assert confirmed.json()["state"] == "PAID"
+    assert confirmed.json()["period_end"] == 2900 + payment_store.MONTH_SECONDS
+    assert client.get(url, headers=headers[0]).json()["period_end"] == confirmed.json()["period_end"]
+    assert len(requests) == 2
+
+
+def test_second_expiration_rejection_stops_recovery(pix_case, monkeypatch):
+    from core.pagbank import PixExpirationRejected
+
+    client, headers, bank = pix_case
+    attempts = []
+
+    def reject(**parameters):
+        attempts.append(parameters)
+        raise PixExpirationRejected()
+
+    monkeypatch.setattr(bank, "create_pix", reject)
+    response = client.post(
+        "/auth/pix", headers=headers[0], json={"tax_id": "12345678909"}
+    )
+    assert response.status_code == 502
+    assert len(attempts) == 2
+    assert attempts[0]["reference"] != attempts[1]["reference"]
+    store = payment_api.get_store()
+    user = store.current_user(headers[0]["Authorization"].removeprefix("Bearer "))
+    assert SubscriptionStore(store).status(user["id"])["access_allowed"] is False
+    with payment_api.get_store().connection() as db:
+        states = [row[0] for row in db.execute("SELECT state FROM subscription_payments").fetchall()]
+    assert sorted(states) == ["CREATING", "EXPIRED"]
