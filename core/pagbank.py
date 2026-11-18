@@ -11,6 +11,8 @@ from urllib.request import (
 
 from fastapi import HTTPException
 
+from core.pagbank_homologation import begin_capture, end_capture
+
 
 
 class PixExpirationRejected(HTTPException):
@@ -86,6 +88,9 @@ class PagBankClient:
             headers=headers,
             method="POST" if data is not None else "GET",
         )
+        capture_id = begin_capture(
+            self.environment, path, payload, reference, self.token
+        )
         try:
             with build_opener(NoRedirect()).open(
                 request, timeout=30
@@ -96,9 +101,18 @@ class PagBankClient:
                 result = json.loads(body)
                 if not isinstance(result, dict):
                     raise ValueError("Resposta inesperada")
+                end_capture(
+                    capture_id, token=self.token,
+                    http_status=response.status, response=result,
+                )
                 return result
         except (HTTPError, URLError, TimeoutError, OSError,
                 ValueError, UnicodeError) as error:
+            end_capture(
+                capture_id, token=self.token,
+                http_status=error.code if isinstance(error, HTTPError) else None,
+                error_type=type(error).__name__,
+            )
             logging.getLogger(__name__).warning(
                 "PagBank: falha na requisicao; tipo=%s; HTTP=%s",
                 type(error).__name__,
