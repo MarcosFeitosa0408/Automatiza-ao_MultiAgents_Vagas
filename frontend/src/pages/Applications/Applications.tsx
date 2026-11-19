@@ -3,6 +3,7 @@ import DeleteApplication from "./DeleteApplication";
 import JobDetailsEditor from "../ApplicationDetails/JobDetailsEditor";
 import InterviewPanel from "./InterviewPanel";
 import ResumePanel from "./ResumePanel";
+import CoverLetterPanel from "./CoverLetterPanel";
 import { useEffect, useState } from "react";
 import { listJobApplications } from "../../api/applications";
 import type {
@@ -264,6 +265,11 @@ export default function Applications({
 
 <ResumePanel
   key={`resume-${application.application_id}-${application.updated_at}`}
+  applicationId={application.application_id}
+/>
+
+<CoverLetterPanel
+  key={`letter-${application.application_id}-${application.updated_at}`}
   applicationId={application.application_id}
 />
 
