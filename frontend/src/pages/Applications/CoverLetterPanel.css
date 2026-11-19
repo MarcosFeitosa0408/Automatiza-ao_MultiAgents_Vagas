@@ -1,0 +1,21 @@
+.cover-letter-panel { margin-top: 12px; white-space: normal; }
+.cover-letter-content { margin-top: 16px; max-width: 760px; min-width: 0; padding: 20px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text); }
+.cover-letter-content h3 { margin: 0 0 12px; }
+.cover-letter-help, .cover-letter-warnings { margin: 12px 0; font-size: 0.875rem; line-height: 1.6; overflow-wrap: anywhere; }
+.cover-letter-content > label:not(.cover-letter-review) { display: block; margin: 16px 0 8px; font-weight: 600; }
+.cover-letter-content textarea { display: block; width: 100%; min-width: 260px; max-width: 100%; min-height: 300px; padding: 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text); font: 1rem/1.65 "Segoe UI", system-ui, sans-serif; resize: vertical; }
+.cover-letter-content details { margin: 16px 0; }
+.cover-letter-content summary { cursor: pointer; padding: 8px 0; }
+.cover-letter-review { display: flex; align-items: flex-start; gap: 8px; margin: 16px 0; font-size: 0.9375rem; line-height: 1.6; }
+.cover-letter-review input { flex: 0 0 auto; margin-top: 6px; }
+.cover-letter-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 12px 0; }
+.cover-letter-content [role="alert"] { margin: 12px 0; color: #b91c1c; overflow-wrap: anywhere; }
+.cover-letter-document { max-width: 720px; margin: 16px 0; padding: 24px; border: 1px solid #d1d5db; border-radius: 8px; background: white; color: #111827; font: 1rem/1.65 Arial, sans-serif; text-align: left; overflow-wrap: anywhere; }
+.cover-letter-document header { margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid #d1d5db; }
+.cover-letter-document h2, .cover-letter-document h3 { color: #111827; margin: 0 0 12px; }
+.cover-letter-document header p { margin: 2px 0; }
+.cover-letter-document p { margin: 0 0 16px; white-space: pre-wrap; }
+@media (max-width: 600px) {
+  .cover-letter-content { padding: 16px 12px; }
+  .cover-letter-document { padding: 16px; }
+}
