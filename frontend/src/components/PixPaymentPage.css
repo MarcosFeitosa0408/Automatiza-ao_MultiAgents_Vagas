@@ -1,0 +1,91 @@
+.pix-page {
+  min-height: 100svh;
+  padding: clamp(24px, 4vw, 64px);
+  color: #edf7ff;
+  color-scheme: dark;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  background: radial-gradient(ellipse at 22% 40%, #123b62, transparent 60%), #041326;
+}
+
+.pix-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(340px, 1fr);
+  align-items: center;
+  gap: clamp(24px, 3vw, 48px);
+  max-width: 1360px;
+  margin: 0 auto;
+}
+
+.pix-illustration { margin: 0; min-width: 0; text-align: center; }
+.pix-illustration img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid #286893;
+  border-radius: 24px;
+  box-shadow: 0 15px 70px #0bc9f51c;
+}
+.pix-illustration figcaption {
+  margin-top: 24px;
+  color: #f1faff;
+  font-size: clamp(22px, 2.2vw, 30px);
+  font-weight: 700;
+}
+.pix-illustration p { margin-top: 12px; color: #b8cfe1; font-size: 1rem; line-height: 1.7; }
+
+.pix-card {
+  min-width: 0;
+  padding: clamp(24px, 3vw, 40px);
+  border: 1px solid #2477a1;
+  border-radius: 26px;
+  background: linear-gradient(145deg, #0c2b44f5, #04172bf5);
+  box-shadow: 0 22px 65px #0005, inset 0 1px 0 #b7e9ff0c;
+}
+.pix-brand { color: #b2d8ee; font-size: 0.875rem; font-weight: 700; letter-spacing: .16em; }
+.pix-card h1 { margin: 18px 0; color: #f4f9ff; font-size: clamp(26px, 2.6vw, 38px); line-height: 1.15; }
+.pix-offer { display: inline-block; padding: 6px 14px; border: 1px solid #087b9d; border-radius: 999px; color: #39e2f5; background: #05bce512; font-size: 0.875rem; font-weight: 600; }
+.pix-price { margin: 16px 0 4px; color: #26def1; font-size: clamp(36px, 4.4vw, 62px); letter-spacing: -.035em; line-height: 1.15; overflow-wrap: anywhere; }
+.pix-period { color: #f1f7ff; font-size: 1.2rem; font-weight: 600; }
+.pix-terms { margin-top: 8px; color: #b5cce0; line-height: 1.65; font-size: 0.9375rem; }
+.pix-form { display: grid; gap: 12px; margin-top: 26px; }
+.pix-card label { display: block; color: #e3f2ff; font-size: 1rem; font-weight: 600; }
+.pix-card input, .pix-card textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 13px 14px;
+  border: 1px solid #3d657f;
+  border-radius: 11px;
+  background: #10283e;
+  color: #f2f9ff;
+  font: inherit;
+}
+.pix-card input::placeholder { color: #a6bed2; }
+.pix-card textarea { display: block; margin: 10px 0; resize: vertical; font-size: 0.875rem; overflow-wrap: anywhere; }
+.pix-privacy { color: #afc9dc; font-size: 0.875rem; line-height: 1.6; }
+.pix-primary, .pix-secondary {
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font: 600 1rem "Segoe UI", system-ui, sans-serif;
+}
+.pix-primary { border: 1px solid #57e9f6; background: linear-gradient(110deg, #31e1ef, #04bfe8); color: #002438; box-shadow: 0 6px 24px #07c7ed1c; }
+.pix-primary:hover:not(:disabled) { background: #76eff8; }
+.pix-secondary { border: 1px solid #64d9f3; background: transparent; color: #a8edff; }
+.pix-secondary:hover:not(:disabled) { background: #143b55; }
+.pix-page :focus-visible { outline: 3px solid #65e5f8; outline-offset: 4px; }
+.pix-qr { margin: 24px auto; width: fit-content; max-width: 100%; padding: 8px; background: #fff; border-radius: 16px; color-scheme: light; }
+.pix-qr img { display: block; width: 280px; max-width: 100%; height: auto; }
+.pix-payment-status { margin: 18px 0; color: #72def2; text-align: center; font-size: 0.9375rem; line-height: 1.6; }
+.pix-notice { margin-top: 18px; padding: 12px; border: 1px solid #3383a2; border-radius: 10px; background: #123852; color: #dcf7ff; font-size: 0.9375rem; line-height: 1.6; overflow-wrap: anywhere; }
+.pix-error { margin-top: 18px; padding: 12px; border: 1px solid #bd7489; border-radius: 10px; background: #401d32; color: #ffe1ea; line-height: 1.6; overflow-wrap: anywhere; }
+.pix-back { margin-top: 24px; padding-top: 20px; border-top: 1px solid #294b65; }
+
+@media (max-width: 850px) {
+  .pix-page { padding: 24px 16px 32px; }
+  .pix-layout { grid-template-columns: minmax(0, 560px); justify-content: center; gap: 24px; }
+  .pix-card { grid-row: 1; padding: 26px 22px; border-radius: 20px; }
+  .pix-illustration img { border-radius: 18px; }
+  .pix-illustration figcaption { margin-top: 18px; }
+}

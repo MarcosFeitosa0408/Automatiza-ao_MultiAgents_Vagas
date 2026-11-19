@@ -170,7 +170,7 @@ it("impede o uso da plataforma quando o teste e a consulta terminaram", async ()
 
   await user.click(purchase);
   expect(await screen.findByRole("heading", {
-    name: "Continue sua prepara\u00e7\u00e3o",
+    name: "Ative seu primeiro mês",
   })).toBeTruthy();
   expect(screen.getByLabelText("CPF do pagador")).toBeTruthy();
   expect(screen.queryByText("\u00c1rea privada do candidato")).toBeNull();

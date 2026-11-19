@@ -13,11 +13,10 @@ vi.mock("../api/payment", () => ({
 vi.mock("../api/subscription", () => ({
   getSubscriptionStatus: vi.fn(),
 }));
-vi.mock("qrcode", () => ({
-  default: {
-    toDataURL: async () => "data:image/png;base64,dGVzdA==",
-  },
+const { toDataURL } = vi.hoisted(() => ({
+  toDataURL: vi.fn().mockResolvedValue("data:image/png;base64,dGVzdA=="),
 }));
+vi.mock("qrcode", () => ({ default: { toDataURL } }));
 
 const payment: PixPayment = {
   id: "payment-test",
@@ -30,6 +29,7 @@ const payment: PixPayment = {
 };
 
 beforeEach(() => {
+  toDataURL.mockResolvedValue("data:image/png;base64,dGVzdA==");
   vi.mocked(getSubscriptionStatus).mockResolvedValue({
     access_allowed: false,
     read_allowed: false,
@@ -97,4 +97,36 @@ it("preserva o CPF apos falha e permite tentar novamente", async () => {
   await user.click(screen.getByRole("button", { name: "Pagar com Pix" }));
   expect(await screen.findByLabelText("Pix Copia e Cola")).toBeTruthy();
   expect(createPixPayment).toHaveBeenCalledTimes(2);
+});
+
+
+it("exibe o valor de renovação informado pelo servidor sem a oferta de primeiro período", async () => {
+  const user = userEvent.setup();
+  const status = await getSubscriptionStatus();
+  vi.mocked(getSubscriptionStatus).mockResolvedValue({ ...status, next_payment_amount: 2990 });
+  vi.mocked(createPixPayment).mockResolvedValue({ ...payment, amount: 2990 });
+  vi.mocked(getPixPayment).mockResolvedValue({ ...payment, amount: 2990 });
+  render(<PixPaymentPage onBack={vi.fn()} onConfirmed={vi.fn()} />);
+  await screen.findByRole("heading", { name: /29,90/ });
+  expect(screen.getByText("Mais 30 dias de acesso")).toBeTruthy();
+  expect(screen.queryByText("Oferta de lançamento")).toBeNull();
+  await user.type(screen.getByLabelText("CPF do pagador"), "12345678909");
+  await user.click(screen.getByRole("button", { name: "Pagar com Pix" }));
+  expect(await screen.findByLabelText("Pix Copia e Cola")).toBeTruthy();
+  expect(screen.getByRole("heading", { name: /29,90/ })).toBeTruthy();
+});
+
+it("desenha e copia somente o código Pix retornado pela API", async () => {
+  const user = userEvent.setup();
+  const writeText = vi.spyOn(navigator.clipboard, "writeText");
+  render(<PixPaymentPage onBack={vi.fn()} onConfirmed={vi.fn()} />);
+  await screen.findByRole("heading", { name: /19,90/ });
+  expect(screen.queryByAltText("QR Code Pix da cobrança")).toBeNull();
+  await user.type(screen.getByLabelText("CPF do pagador"), "12345678909");
+  await user.click(screen.getByRole("button", { name: "Pagar com Pix" }));
+  expect(await screen.findByAltText("QR Code Pix da cobrança")).toBeTruthy();
+  expect(toDataURL).toHaveBeenCalledWith(payment.qr_text, expect.objectContaining({ margin: 4 }));
+  await user.click(screen.getByRole("button", { name: "Copiar código Pix" }));
+  expect(writeText).toHaveBeenCalledWith(payment.qr_text);
+  expect(await screen.findByText("Código Pix copiado. Cole no aplicativo do seu banco.")).toBeTruthy();
 });
