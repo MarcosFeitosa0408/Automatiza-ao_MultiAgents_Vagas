@@ -175,3 +175,15 @@ describe("Exclusão na lista", () => {
     expect(screen.getAllByRole("row")).toHaveLength(2);
   });
 });
+
+
+it("oferece a carta em cada candidatura e a oculta no modo de consulta", async () => {
+  vi.mocked(listJobApplications).mockResolvedValue([application, { ...application, application_id: "outro-id" }]);
+  const { unmount } = render(<Applications />);
+  expect(await screen.findAllByRole("button", { name: "Carta de Apresentação" })).toHaveLength(2);
+  unmount();
+  render(<Applications readOnly />);
+  await screen.findAllByText("Analista de Dados");
+  expect(screen.queryByRole("button", { name: "Carta de Apresentação" })).toBeNull();
+  cleanup();
+});
