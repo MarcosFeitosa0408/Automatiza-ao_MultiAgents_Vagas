@@ -114,7 +114,7 @@ def test_payment_is_private_and_admin_block_wins(payment_case):
 
 
 
-def test_expired_waiting_pix_can_be_replaced(payment_case):
+def test_elapsed_local_deadline_keeps_waiting_pix_reserved(payment_case):
     _, subscriptions, payments, _, user = payment_case
     first = payments.reserve(user["id"], "sandbox", now=1000)
     order = order_for(first, "WAITING")
@@ -125,18 +125,27 @@ def test_expired_waiting_pix_can_be_replaced(payment_case):
     )
     assert before["state"] == "WAITING"
 
-    expired = payments.confirm(
+    waiting = payments.confirm(
         first["id"], user["id"], FakeBank(order), now=2800
     )
-    assert expired["state"] == "EXPIRED"
-    assert expired["qr_text"] is None
+    assert waiting["state"] == "WAITING"
+    assert waiting["qr_text"] == "codigo-apenas-para-teste"
     assert subscriptions.status(user["id"], now=2800)["access_allowed"] is False
 
-    replacement = payments.reserve(user["id"], "sandbox", now=2800)
-    assert replacement["id"] != first["id"]
-    assert replacement["reference"] != first["reference"]
-    assert replacement["amount"] == 1990
-    assert payments.get(first["id"], user["id"])["state"] == "EXPIRED"
+    reserved = payments.reserve(user["id"], "sandbox", now=2800)
+    assert reserved["id"] == first["id"]
+    assert reserved["reference"] == first["reference"]
+
+    # A confirmacao tardia do mesmo pedido concede somente um periodo.
+    confirmed = payments.confirm(
+        first["id"], user["id"], FakeBank(order_for(first)), now=2801
+    )
+    repeated = payments.confirm(
+        first["id"], user["id"], FakeBank(order_for(first)), now=2802
+    )
+    assert confirmed["state"] == "PAID"
+    assert confirmed["period_end"] == 2801 + MONTH_SECONDS
+    assert repeated["period_end"] == confirmed["period_end"]
 
 
 def test_paid_pix_is_confirmed_even_when_checked_after_deadline(payment_case):
@@ -270,3 +279,45 @@ def test_future_payment_does_not_bridge_unpaid_gap(payment_case):
             "SELECT COUNT(*) FROM subscription_payments WHERE user_id=?",
             (user["id"],),
         ).fetchone()[0] == 2
+
+
+@pytest.mark.parametrize("distinct", [False, True])
+def test_concurrent_confirmations_grant_each_payment_only_once(payment_case, distinct):
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Barrier
+
+    accounts, subscriptions, payments, _, user = payment_case
+    first = payments.reserve(user["id"], "sandbox", now=1000)
+    payments.record_order(first["id"], user["id"], order_for(first, "WAITING"))
+    targets = [first, first]
+    if distinct:
+        # Historico criado pela regra antiga, seguido de uma substituicao.
+        with accounts.connection() as db:
+            db.execute("UPDATE subscription_payments SET state='EXPIRED' WHERE id=?", (first["id"],))
+        second = payments.reserve(user["id"], "sandbox", now=2000)
+        payments.record_order(second["id"], user["id"], order_for(second, "WAITING"))
+        targets[1] = second
+    orders = {order_for(payment)["id"]: order_for(payment) for payment in targets}
+    barrier = Barrier(2)
+
+    class ConcurrentBank:
+        environment = "sandbox"
+
+        def consult_order(self, order_id):
+            barrier.wait(timeout=10)
+            return orders[order_id]
+
+    def confirm(payment):
+        return payments.confirm(payment["id"], user["id"], ConcurrentBank(), now=3000)
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        results = list(executor.map(confirm, targets))
+    assert all(result["state"] == "PAID" for result in results)
+    periods = sorted({(result["period_start"], result["period_end"]) for result in results})
+    assert len(periods) == (2 if distinct else 1)
+    assert periods[0][0] == 3000
+    if distinct:
+        assert periods[0][1] == periods[1][0]
+    expected_end = 3000 + len(periods) * MONTH_SECONDS
+    assert periods[-1][1] == expected_end
+    assert subscriptions.status(user["id"], now=3000)["paid_ends_at"] == expected_end

@@ -187,12 +187,9 @@ class PaymentStore:
             terminal = None
             if matches and state in ("DECLINED", "CANCELED"):
                 terminal = state
-            elif (
-                matches
-                and state == "WAITING"
-                and timestamp >= row["created_at"] + 1800
-            ):
-                terminal = "EXPIRED"
+            # O prazo local nao comprova o encerramento no provedor.
+            # Enquanto o banco responder WAITING, preserve a reserva para
+            # uma nova consulta, sem oferecer outra cobranca para o mesmo pedido.
 
             if terminal:
                 with self.accounts.connection() as db:
