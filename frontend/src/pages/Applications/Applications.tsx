@@ -1,3 +1,4 @@
+import "./Applications.css";
 import ProgressPanel from "./ProgressPanel";
 import DeleteApplication from "./DeleteApplication";
 import JobDetailsEditor from "../ApplicationDetails/JobDetailsEditor";
@@ -186,7 +187,7 @@ export default function Applications({
             className="applications-table-wrap"
             tabIndex={0}
             role="region"
-            aria-label="Tabela de candidaturas com rolagem horizontal"
+            aria-label="Lista de candidaturas"
           >
             <table className="applications-table">
               <caption className="visually-hidden">
@@ -311,17 +312,17 @@ export default function Applications({
 )}
 
                       </td>
-                      <td>{application.job.location || "Não informado"}</td>
-                      <td>
+                      <td data-label="Local">{application.job.location || "Não informado"}</td>
+                      <td data-label="Etapa">
                         <span className="status-badge">
                           {statusLabels[status] ?? status}
                         </span>
                       </td>
-                      <td>
+                      <td data-label="Score">
                         {application.qualification?.fit_score ?? "—"}
                       </td>
-                      <td>{review}</td>
-                      <td>{formatDate(application.updated_at)}</td>
+                      <td data-label="Revisão humana">{review}</td>
+                      <td data-label="Atualizada em">{formatDate(application.updated_at)}</td>
                     </tr>
                   );
                 })}
