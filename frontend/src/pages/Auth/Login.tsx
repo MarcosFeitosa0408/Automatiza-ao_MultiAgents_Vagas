@@ -85,6 +85,7 @@ export default function Login({ onAuthenticated, message }: Props) {
         <img src="/images/robots-globe.jpg" width="1408" height="768" alt="Pequenos robôs ao redor de um globo, ilustrando a preparação para oportunidades de trabalho." />
         <figcaption>Seu próximo passo começa aqui <span aria-hidden="true">🌎🤖</span></figcaption>
         <p>Encontre vagas alinhadas ao seu perfil, prepare seu currículo para sistemas ATS e pratique entrevistas. Organize suas candidaturas e acompanhe cada etapa, mantendo as decisões sob seu controle.</p>
+        <p><a href="/sobre.html" style={{ color: "#72e6f5", textUnderlineOffset: "4px" }}>Conheça a plataforma e o responsável pelo projeto</a></p>
       </figure>
       <section className="dashboard-panel auth-card">
         <p className="dashboard-eyebrow">MULTIAGENTS VAGAS</p>
