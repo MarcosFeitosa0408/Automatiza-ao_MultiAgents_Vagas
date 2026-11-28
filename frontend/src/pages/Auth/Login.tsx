@@ -82,7 +82,7 @@ export default function Login({ onAuthenticated, message }: Props) {
   return (
     <main className="auth-page auth-with-robots">
       <figure className="auth-robots">
-        <img src="/images/robots-globe.jpg" width="1408" height="768" alt="Pequenos robôs ao redor de um globo, ilustrando a preparação para oportunidades de trabalho." />
+        <img src="/images/robots-office.webp" width="1672" height="941" fetchPriority="high" alt="Quatro robôs com olhos expressivos em um escritório futurista, auxiliando na busca de vagas, nos currículos, nas entrevistas e no acompanhamento de candidaturas." />
         <figcaption>Seu próximo passo começa aqui <span aria-hidden="true">🌎🤖</span></figcaption>
         <p>Encontre vagas alinhadas ao seu perfil, prepare seu currículo para sistemas ATS e pratique entrevistas. Organize suas candidaturas e acompanhe cada etapa, mantendo as decisões sob seu controle.</p>
         <p><a href="/sobre.html" style={{ color: "#72e6f5", textUnderlineOffset: "4px" }}>Conheça a plataforma e o responsável pelo projeto</a></p>
